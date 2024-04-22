@@ -25,6 +25,7 @@ export const createOAuth = (cfg?: OAuthConfig) => {
       app.provide('http', http)
       app.provide('login', login)
       app.provide('logout', logout)
+      app.provide('oauth-callback', oauthCallback)
     },
     config: oauthConfig
   } as OAuth

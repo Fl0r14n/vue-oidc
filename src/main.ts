@@ -13,7 +13,6 @@ import { createOAuth } from 'vue-oidc'
 
 const {
   SSR,
-  PROD,
   BASE_URL,
   VITE_THEME,
   VITE_OAUTH_ISSUER_PATH,
@@ -23,10 +22,6 @@ const {
   VITE_OAUTH_CLIENT_ID,
   VITE_OAUTH_CLIENT_SECRET,
   VITE_OAUTH_SCOPE,
-  VITE_APP_DOMAIN,
-  VITE_API_BASE,
-  VITE_API_PATH,
-  VITE_API_INSTANCE
 } = import.meta.env
 
 export const createApp = (req?: any) => {

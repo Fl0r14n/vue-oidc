@@ -1,3 +1,5 @@
-export * from './models'
-export * from './module'
-export * from './OAuth.vue'
+export * from '@/models'
+export * from '@/module'
+import OAuth from '@/OAuth.vue'
+
+export { OAuth }

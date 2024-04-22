@@ -1,6 +1,5 @@
 import type { NavigationGuardWithThis, RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
-import {useOAuth} from 'vue-oidc'
-
+import { useOAuth } from 'vue-oidc'
 
 export const oauthCallbackGuard: NavigationGuardWithThis<undefined> = async (to: RouteLocationNormalized) => {
   const appId = 'app'

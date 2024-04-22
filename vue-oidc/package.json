@@ -1,6 +1,6 @@
 {
   "name": "vue-oidc",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "author": "Fl0r14n <florian.chis@gmail.com>",
   "homepage": "https://github.com/Fl0r14n/vue-oidc",
   "description": "A fully OAuth2.1 compliant angular library",
@@ -33,7 +33,7 @@
     },
     "./dist/style.css": "./dist/style.css"
   },
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
