@@ -1,0 +1,5 @@
+// some issue with some import in vuetify labs
+//@forward "vuetify/settings" with (
+//  $footer-flex: none
+//);
+@forward 'vuetify/tools';
