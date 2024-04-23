@@ -1,3 +1,6 @@
+import '@mdi/font/scss/materialdesignicons.scss'
+import '@/assets/main.scss'
+
 import { createApp as createCSRApp, createSSRApp } from 'vue'
 
 import { createPinia } from 'pinia'
