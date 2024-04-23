@@ -8,8 +8,8 @@ import fs from 'fs'
 let key, cert
 
 try {
-  key = fs.readFileSync('../.cert/key.pem')
-  cert = fs.readFileSync('../.cert/cert.pem')
+  key = fs.readFileSync('.cert/key.pem')
+  cert = fs.readFileSync('.cert/cert.pem')
 } catch { /* empty */
 }
 

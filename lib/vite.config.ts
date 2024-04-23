@@ -12,7 +12,6 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'vue-oidc',
-      fileName: 'vue-oidc'
     },
     rollupOptions: {
       external: ['vue'],

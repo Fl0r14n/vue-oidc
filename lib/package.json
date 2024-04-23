@@ -1,6 +1,6 @@
 {
   "name": "vue-oidc",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "author": "Fl0r14n <florian.chis@gmail.com>",
   "homepage": "https://github.com/Fl0r14n/vue-oidc",
   "description": "A fully OAuth2.1 compliant angular library",
@@ -28,12 +28,12 @@
   "module": "./dist/vue-oidc.js",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/vue-oidc.js",
       "require": "./dist/vue-oidc.umd.cjs"
     },
     "./dist/style.css": "./dist/style.css"
   },
-  "types": "./dist/src/index.d.ts",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
