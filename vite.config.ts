@@ -28,7 +28,7 @@ export default defineConfig({
     vuetify({
       autoImport: true,
       styles: {
-        configFile: '@/assets/variables.scss'
+        configFile: 'src/assets/variables.scss'
       }
     })
   ],
