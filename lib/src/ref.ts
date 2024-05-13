@@ -1,12 +1,12 @@
 import { type Ref, ref, watch } from 'vue'
 
 const get = (key: string) => {
-  const value = localStorage.getItem(key)
+  const value = globalThis.localStorage.getItem(key)
   return (value && JSON.parse(value)) || undefined
 }
 
 const set = (key: string, value: any) => {
-  localStorage.setItem(key, JSON.stringify(value))
+  globalThis.localStorage.setItem(key, JSON.stringify(value))
 }
 
 export const storageRef = <T>(key: Ref<string> | string, initial?: T, map?: (v: any) => T) => {
