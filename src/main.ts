@@ -24,7 +24,7 @@ const {
   VITE_OAUTH_LOGOUT_PATH,
   VITE_OAUTH_CLIENT_ID,
   VITE_OAUTH_CLIENT_SECRET,
-  VITE_OAUTH_SCOPE,
+  VITE_OAUTH_SCOPE
 } = import.meta.env
 
 export const createApp = (req?: any) => {
@@ -110,7 +110,5 @@ export const createApp = (req?: any) => {
         }
       })
     )
-  return { app, router }
+  return { app, router, pinia}
 }
-const { app, router } = createApp()
-router.isReady().then(() => app.mount('#app'))

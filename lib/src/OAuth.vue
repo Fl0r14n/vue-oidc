@@ -1,79 +1,81 @@
 <template>
-  <VMenu v-model="menu" rounded :close-on-content-click="false" location="bottom">
-    <template v-slot:activator="{ props }">
-      <VBtn v-bind="props" :icon="isAuthorized ? 'mdi-account' : 'mdi-account-outline'" />
-    </template>
-    <VCard>
-      <template v-if="isAuthorized">
-        <slot name="userInfo" :user="user" :logout="signOut" v-if="$slots.user" />
-        <template v-else>
-          <VList v-if="user.name">
-            <VListItem :title="user.name" :subtitle="user.email">
-              <template #prepend>
-                <VAvatar color="primary">
-                  <VImg :src="user.picture" v-if="user.picture" />
-                  <span class="text-h5" v-else v-html="user.initials" />
-                </VAvatar>
-              </template>
-            </VListItem>
-          </VList>
-        </template>
-        <VCardActions>
-          <VSpacer />
-          <VBtn @click="signOut()">{{ t('oauth.logout') }}</VBtn>
-        </VCardActions>
+  <VNoSsr>
+    <VMenu v-model="menu" rounded :close-on-content-click="false" location="bottom">
+      <template v-slot:activator="{ props }">
+        <VBtn v-bind="props" :icon="isAuthorized ? 'mdi-account' : 'mdi-account-outline'" />
       </template>
-      <template v-else>
-        <template v-if="showError">
-          <VCardText>
-            <VAlert type="error" closable :text="errorDescription" @click:close="showError = false" />
-          </VCardText>
+      <VCard>
+        <template v-if="isAuthorized">
+          <slot name="userInfo" :user="user" :logout="signOut" v-if="$slots.user" />
+          <template v-else>
+            <VList v-if="user.name">
+              <VListItem :title="user.name" :subtitle="user.email">
+                <template #prepend>
+                  <VAvatar color="primary">
+                    <VImg :src="user.picture" v-if="user.picture" />
+                    <span class="text-h5" v-else v-html="user.initials" />
+                  </VAvatar>
+                </template>
+              </VListItem>
+            </VList>
+          </template>
+          <VCardActions>
+            <VSpacer />
+            <VBtn @click="signOut()">{{ t('oauth.logout') }}</VBtn>
+          </VCardActions>
         </template>
         <template v-else>
-          <template v-if="type === OAuthType.RESOURCE">
-            <VForm ref="f" v-model="form.valid" lazy-validation autocomplete="on" @submit.prevent="signIn()"
-                   @keyup.enter="signIn()">
-              <VCardText class="pb-0 oauth-form">
-                <VTextField
-                  name="username"
-                  required
-                  prepend-inner-icon="mdi-email-outline"
-                  :label="t('oauth.username')"
-                  :counter="length"
-                  v-model="form.model.username"
-                  :rules="form.rules.username" />
-                <VTextField
-                  name="password"
-                  required
-                  prepend-inner-icon="mdi-lock-outline"
-                  :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
-                  :type="visible ? 'text' : 'password'"
-                  :label="t('oauth.password')"
-                  :counter="length"
-                  v-model="form.model.password"
-                  :rules="form.rules.password"
-                  @click:append-inner="visible = !visible" />
-              </VCardText>
+          <template v-if="showError">
+            <VCardText>
+              <VAlert type="error" closable :text="errorDescription" @click:close="showError = false" />
+            </VCardText>
+          </template>
+          <template v-else>
+            <template v-if="type === OAuthType.RESOURCE">
+              <VForm ref="f" v-model="form.valid" lazy-validation autocomplete="on" @submit.prevent="signIn()"
+                     @keyup.enter="signIn()">
+                <VCardText class="pb-0 oauth-form">
+                  <VTextField
+                    name="username"
+                    required
+                    prepend-inner-icon="mdi-email-outline"
+                    :label="t('oauth.username')"
+                    :counter="length"
+                    v-model="form.model.username"
+                    :rules="form.rules.username" />
+                  <VTextField
+                    name="password"
+                    required
+                    prepend-inner-icon="mdi-lock-outline"
+                    :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
+                    :type="visible ? 'text' : 'password'"
+                    :label="t('oauth.password')"
+                    :counter="length"
+                    v-model="form.model.password"
+                    :rules="form.rules.password"
+                    @click:append-inner="visible = !visible" />
+                </VCardText>
+                <VCardActions>
+                  <VSpacer />
+                  <VBtn type="submit" :disabled="!form.valid">
+                    {{ t('oauth.login') }}
+                  </VBtn>
+                </VCardActions>
+              </VForm>
+            </template>
+            <template v-else>
               <VCardActions>
                 <VSpacer />
-                <VBtn type="submit" :disabled="!form.valid">
+                <VBtn @click="login({ responseType: responseType || type, redirectUri: getRedirectUri(), state })">
                   {{ t('oauth.login') }}
                 </VBtn>
               </VCardActions>
-            </VForm>
-          </template>
-          <template v-else>
-            <VCardActions>
-              <VSpacer />
-              <VBtn @click="login({ responseType: responseType || type, redirectUri: getRedirectUri(), state })">
-                {{ t('oauth.login') }}
-              </VBtn>
-            </VCardActions>
+            </template>
           </template>
         </template>
-      </template>
-    </VCard>
-  </VMenu>
+      </VCard>
+    </VMenu>
+  </VNoSsr>
 </template>
 <script setup lang="ts">
 import {
@@ -89,7 +91,8 @@ import {
   VMenu,
   VSpacer,
   VTextField,
-  VForm
+  VForm,
+  VNoSsr
 } from 'vuetify/components'
 import { OAuthType } from '@/models'
 import { useOAuth, useOAuthUser } from '@/module'
