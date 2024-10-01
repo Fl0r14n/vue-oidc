@@ -1,6 +1,6 @@
 {
   "name": "vue-oidc",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": "Fl0r14n <florian.chis@gmail.com>",
   "homepage": "https://github.com/Fl0r14n/vue-oidc",
   "description": "A fully OAuth2.1 compliant angular library",
@@ -36,20 +36,17 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
+    "build": "vite build",
     "test:unit": "vitest",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build --force && resolve-tspaths --project tsconfig.app.json",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "lint": "eslint . --fix",
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "axios": "^1.6.8"
+    "axios": "^1.7.7"
   },
   "peerDependencies": {
-    "vue": "^3.4.24",
-    "vue-i18n": "^9.13.1",
-    "vuetify": "^3.5.16"
+    "vue": "^3.5.10",
+    "vue-i18n": "^9.14.1",
+    "vuetify": "^3.7.2"
   }
 }
