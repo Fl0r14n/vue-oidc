@@ -8,7 +8,7 @@ export interface ClientCredentialConfig {
   scope?: string
 }
 
-export interface ResourceConfig extends ClientCredentialConfig {}
+export type ResourceConfig = ClientCredentialConfig
 
 export interface ImplicitConfig {
   authorizePath: string

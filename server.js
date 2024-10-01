@@ -70,7 +70,9 @@ const init = async hmrPort => {
         .replace(`<!--app-html-->`, appHtml)
       res.status(200).setHeader('Content-Type', 'text/html').end(html)
     } catch (e) {
-      vite && vite.ssrFixStacktrace(e)
+      if(e && vite) {
+        vite.ssrFixStacktrace(e)
+      }
       console.log(e)
       res.status(500).end(e)
     }

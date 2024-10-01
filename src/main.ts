@@ -27,7 +27,7 @@ const {
   VITE_OAUTH_SCOPE
 } = import.meta.env
 
-export const createApp = (req?: any) => {
+export const createApp = () => {
   const oauth = createOAuth({
     config: {
       issuerPath: VITE_OAUTH_ISSUER_PATH,
@@ -110,5 +110,5 @@ export const createApp = (req?: any) => {
         }
       })
     )
-  return { app, router, pinia}
+  return { app, router, pinia }
 }

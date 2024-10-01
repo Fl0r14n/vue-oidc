@@ -3,6 +3,10 @@
   "semi": false,
   "tabWidth": 2,
   "singleQuote": true,
-  "printWidth": 100,
-  "trailingComma": "none"
+  "printWidth": 140,
+  "trailingComma": "none",
+  "arrowParens": "avoid",
+  "bracketSameLine": true,
+  "jsxSingleQuote": false,
+  "vueIndentScriptAndStyle": true
 }

@@ -28,14 +28,14 @@ export default [
     }
   },
   {
-    ignores: ['public/', 'dist/'],
+    ignores: ['public/', 'dist/', 'lib/dist'],
   },
   {
     rules: {
       semi: ['error', 'never'],
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-expressions': 'off',
-      '@typescript-eslint/no-unused-vars': 'off'
+      // '@typescript-eslint/no-unused-expressions': 'off',
+      // '@typescript-eslint/no-unused-vars': 'off'
     }
   }
 ]
