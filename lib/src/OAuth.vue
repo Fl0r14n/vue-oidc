@@ -151,7 +151,7 @@ const signOut = async () => {
 }
 
 const getRedirectUri = () => {
-  const { origin, pathname, search } = location
+  const { origin, pathname, search } = globalThis.location || {}
   return props.redirectUri || `${origin}${pathname}${search}`
 }
 

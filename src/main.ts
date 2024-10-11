@@ -27,7 +27,8 @@ const {
   VITE_OAUTH_SCOPE
 } = import.meta.env
 
-export const createApp = () => {
+// eslint-disable-next-line
+export const createApp = (req?: any) => {
   const oauth = createOAuth({
     config: {
       issuerPath: VITE_OAUTH_ISSUER_PATH,

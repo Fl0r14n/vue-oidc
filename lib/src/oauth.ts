@@ -56,7 +56,7 @@ const toAuthorizationUrl = async (parameters: AuthorizationParameters) => {
   authorizationUrl += `&response_type=${parameters.responseType}`
   authorizationUrl += `&scope=${encodeURIComponent(scope || '')}`
   authorizationUrl += `&state=${encodeURIComponent(parameters.state || '')}`
-  return location.replace(`${authorizationUrl}${generateNonce(scope)}${await generateCodeChallenge(pkce)}`)
+  return globalThis.location?.replace(`${authorizationUrl}${generateNonce(scope)}${await generateCodeChallenge(pkce)}`)
 }
 
 const parseOauthUri = (hash: string) => {
@@ -91,7 +91,7 @@ export const logout = async (logoutRedirectUri?: string) => {
     const tokenHint = id_token && `&id_token_hint=${id_token}` || ''
     const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${logoutRedirectUri}${tokenHint}`
     token.value = {}
-    location.replace(logoutUrl)
+    globalThis.location?.replace(logoutUrl)
   } else {
     await revoke(token.value)
     token.value = {}
@@ -99,7 +99,7 @@ export const logout = async (logoutRedirectUri?: string) => {
 }
 
 export const oauthCallback = async (url?: string) => {
-  const path = (url && new URL(url)) || location
+  const path = (url && new URL(url)) || globalThis.location || {}
   const { hash, search } = path
   const isImplicitRedirect = hash && /(access_token=)|(error=)/.test(hash)
   const isAuthCodeRedirect = (search && /(code=)|(error=)/.test(search)) || (hash && /(code=)|(error=)/.test(hash))
@@ -128,13 +128,13 @@ const autoconfigOauth = async () => {
   if (!tokenPath && issuerPath) {
     const v = await getOpenIDConfiguration()
     config.value = {
-      ...((v.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
-      ...((v.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
-      ...((v.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
-      ...((v.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) || {}),
-      ...((v.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
-      ...((v.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
-      ...((v.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
+      ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
+      ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
+      ...((v?.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
+      ...((v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) || {}),
+      ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
+      ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
+      ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
       ...{ scope: config.value?.scope || 'openid' }
     } as OpenIdConfig
   }
@@ -143,7 +143,7 @@ const autoconfigOauth = async () => {
 const checkCode = async (code?: string) => {
   const { tokenPath } = config.value as OpenIdConfig
   const { codeVerifier, redirectUri } = token.value || {} //should be set by authorizationUrl construction
-  const { origin, pathname } = location
+  const { origin, pathname } = globalThis.location || {}
   if (code && tokenPath) {
     const parameters = await authorize(code, redirectUri || `${origin}${pathname}`, codeVerifier)
     token.value = checkNonce(parameters)

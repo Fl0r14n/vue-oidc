@@ -28,8 +28,8 @@ const init = async hmrPort => {
   let vite
   if (isProduction) {
     app.use(compression())
-    const sirv = (await import('sirv')).default
-    app.use(sirv(path('dist/client')))
+    const serveStatic = (await import('serve-static')).default
+    app.use(serveStatic(path('dist/client'), { index: false }))
   } else {
     vite = await (
       await import('vite')
@@ -70,10 +70,8 @@ const init = async hmrPort => {
         .replace(`<!--app-html-->`, appHtml)
       res.status(200).setHeader('Content-Type', 'text/html').end(html)
     } catch (e) {
-      if(e && vite) {
-        vite.ssrFixStacktrace(e)
-      }
-      console.log(e)
+      if (e && vite) vite.ssrFixStacktrace(e)
+      console.log('SSR Error:', e)
       res.status(500).end(e)
     }
   })

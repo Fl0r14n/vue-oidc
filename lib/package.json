@@ -1,6 +1,6 @@
 {
   "name": "vue-oidc",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "author": "Fl0r14n <florian.chis@gmail.com>",
   "homepage": "https://github.com/Fl0r14n/vue-oidc",
   "description": "A fully OAuth2.1 compliant angular library",
@@ -45,8 +45,8 @@
     "axios": "^1.7.7"
   },
   "peerDependencies": {
-    "vue": "^3.5.10",
-    "vue-i18n": "^9.14.1",
+    "vue": "^3.5.11",
+    "vue-i18n": "^10.0.4",
     "vuetify": "^3.7.2"
   }
 }
