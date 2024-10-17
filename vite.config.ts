@@ -21,12 +21,15 @@ const https = key && cert && {
 export default defineConfig({
   plugins: [
     vue({
+      script: {
+        propsDestructure: true
+      },
       template: {
         transformAssetUrls
       }
     }),
     vuetify({
-      autoImport: true,
+      autoImport: { labs: true },
       styles: {
         configFile: 'src/assets/variables.scss'
       }
