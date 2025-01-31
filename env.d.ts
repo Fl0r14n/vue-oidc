@@ -13,4 +13,5 @@ interface ImportMetaEnv {
   VITE_OAUTH_CLIENT_ID?: string
   VITE_OAUTH_CLIENT_SECRET?: string
   VITE_OAUTH_SCOPE?: string
+  VITE_OAUTH_TYPE?: string
 }

@@ -94,7 +94,7 @@ for oauth resource flow should be the following
 To use the component correctly, make sure of the following:
 
 ```typescript
-import 'vue-oidc/dist/style.css'
+import 'vue-oidc/dist/vue-oidc.css'
 import '@mdi/font/scss/materialdesignicons.scss'
 import 'vuetify/styles'
 
