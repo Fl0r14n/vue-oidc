@@ -1,6 +1,6 @@
 import { type App, type Ref } from 'vue'
 
-export interface ClientCredentialConfig {
+export type ClientCredentialConfig = {
   tokenPath: string
   revokePath?: string
   clientId: string
@@ -10,7 +10,7 @@ export interface ClientCredentialConfig {
 
 export type ResourceConfig = ClientCredentialConfig
 
-export interface ImplicitConfig {
+export type ImplicitConfig = {
   authorizePath: string
   revokePath?: string
   clientId: string
@@ -20,27 +20,27 @@ export interface ImplicitConfig {
   logoutRedirectUri?: string // if not using OAuthParameters
 }
 
-export interface AuthorizationCodeConfig extends ResourceConfig {
+export type AuthorizationCodeConfig = ResourceConfig & {
   authorizePath: string
   logoutPath?: string
   redirectUri?: string // if not using OAuthParameters
   logoutRedirectUri?: string // if not using OAuthParameters
 }
 
-export interface AuthorizationCodePKCEConfig extends AuthorizationCodeConfig {
+export type AuthorizationCodePKCEConfig = AuthorizationCodeConfig & {
   pkce: boolean
 }
 
-export interface OpenIdConfig extends AuthorizationCodePKCEConfig {
+export type OpenIdConfig = AuthorizationCodePKCEConfig & {
   issuerPath: string
 }
 
-export interface ResourceParameters {
+export type ResourceParameters = {
   username: string
   password: string
 }
 
-export interface AuthorizationParameters {
+export type AuthorizationParameters = {
   redirectUri: string
   responseType: OAuthType.IMPLICIT | OAuthType.AUTHORIZATION_CODE | string
   state?: string
@@ -55,7 +55,7 @@ export type OAuthTypeConfig =
   | ResourceConfig
   | ClientCredentialConfig
 
-export interface OAuthConfig {
+export type OAuthConfig = {
   config?: Partial<OAuthTypeConfig>
   storageKey?: string
   ignorePaths?: RegExp[]
@@ -70,7 +70,7 @@ export enum OAuthType {
   CLIENT_CREDENTIAL = 'client_credentials'
 }
 
-export interface OAuthToken {
+export type OAuthToken = {
   id_token?: string
   access_token?: string
   refresh_token?: string
@@ -96,7 +96,7 @@ export enum OAuthStatus {
   DENIED = 'DENIED'
 }
 
-export interface OpenIdConfiguration {
+export type OpenIdConfiguration = {
   issuer?: string
   authorization_endpoint?: string
   introspection_endpoint?: string
@@ -108,7 +108,7 @@ export interface OpenIdConfiguration {
   code_challenge_methods_supported?: string[]
 }
 
-export interface UserInfo {
+export type UserInfo = {
   email?: string
   email_verified?: boolean
   family_name?: string
@@ -123,7 +123,7 @@ export interface UserInfo {
   [x: string]: any
 }
 
-export interface IntrospectInfo extends UserInfo {
+export type IntrospectInfo = UserInfo & {
   active: boolean
   scope: string
   client_id?: string
