@@ -73,7 +73,7 @@ export const jwt = (token?: string) =>
     )
     : {}
 
-export const user = ref<UserInfo>({})
+export const user = ref<UserInfo | undefined>()
 
 watch(
   () => token.value?.id_token,
@@ -87,6 +87,9 @@ watch(
 
 watch([isAuthorized, () => (config.value as any)?.userPath], async ([authorized, userPath]) => {
   if (authorized && userPath) {
-    user.value = await getUser()
+    const usr = await getUser()
+    if (usr) {
+      user.value = usr
+    }
   }
 })

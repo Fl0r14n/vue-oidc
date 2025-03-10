@@ -8,7 +8,7 @@
         <template v-if="isAuthorized">
           <slot name="userInfo" :user="user" :logout="signOut" v-if="$slots.userInfo" />
           <template v-else>
-            <VList v-if="user.name">
+            <VList v-if="user?.name || user?.email">
               <VListItem :title="user.name" :subtitle="user.email">
                 <template #prepend>
                   <VAvatar color="primary">
@@ -158,11 +158,13 @@
   watch(
     user,
     () => {
-      const { given_name, family_name } = user.value
-      if (given_name || family_name) {
-        user.value.initials = `${given_name?.charAt(0) || ''}${family_name?.charAt(0) || ''}`
-      } else {
-        user.value.initials = `?`
+      if (user.value) {
+        const { given_name, family_name } = user.value
+        if (given_name || family_name) {
+          user.value.initials = `${given_name?.charAt(0) || ''}${family_name?.charAt(0) || ''}`
+        } else {
+          user.value.initials = `?`
+        }
       }
     },
     { immediate: true }
