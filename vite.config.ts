@@ -1,22 +1,26 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import fs from 'fs'
+import { defineConfig } from 'vite'
+import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 let key, cert
 
 try {
   key = fs.readFileSync('.cert/key.pem')
   cert = fs.readFileSync('.cert/cert.pem')
-} catch { /* empty */
+} catch {
+  /* empty */
 }
 
-const https = key && cert && {
-  key,
-  cert
-} || undefined
+const https =
+  (key &&
+    cert && {
+      key,
+      cert
+    }) ||
+  undefined
 
 export default defineConfig({
   plugins: [
@@ -41,7 +45,7 @@ export default defineConfig({
         api: 'modern'
       },
       sass: {
-        api: "modern",
+        api: 'modern'
       }
     }
   },
@@ -55,7 +59,8 @@ export default defineConfig({
     noExternal: [/\.css$/, /^vuetify/]
   },
   server: {
-    port: 4200,
+    host: true,
+    port: 3000,
     https
   }
 })

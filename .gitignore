@@ -1,4 +1,5 @@
 .cert
+!/.cert/README.md
 .idea
 .vscode
 
@@ -32,3 +33,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+bun.lock
+yarn.lock
+package-lock.json
+

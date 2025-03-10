@@ -88,7 +88,7 @@ export const logout = async (logoutRedirectUri?: string) => {
   const { logoutPath, clientId } = config.value as any
   if (logoutRedirectUri && logoutPath) {
     const { id_token } = token.value
-    const tokenHint = id_token && `&id_token_hint=${id_token}` || ''
+    const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
     const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${logoutRedirectUri}${tokenHint}`
     token.value = {}
     globalThis.location?.replace(logoutUrl)
@@ -149,4 +149,3 @@ const checkCode = async (code?: string) => {
     token.value = checkNonce(parameters)
   }
 }
-
