@@ -1,4 +1,3 @@
-import '@mdi/font/scss/materialdesignicons.scss'
 import '@/assets/main.scss'
 
 import { createApp as createCSRApp, createSSRApp } from 'vue'
@@ -13,6 +12,7 @@ import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
 import { de, en } from '@/i18n'
 import { oauthCallbackGuard } from '@/guards'
 import { createOAuth } from 'vue-oidc'
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 
 const {
   SSR,
@@ -80,6 +80,13 @@ export const createApp = (req?: any) => {
     .use(oauth)
     .use(
       createVuetify({
+        icons: {
+          defaultSet: 'mdi',
+          aliases,
+          sets: {
+            mdi
+          }
+        },
         ssr: {
           clientWidth: 1920,
           clientHeight: 1080

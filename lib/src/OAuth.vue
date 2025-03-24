@@ -2,7 +2,7 @@
   <VNoSsr>
     <VMenu v-model="menu" rounded :close-on-content-click="false" location="bottom">
       <template v-slot:activator="{ props }">
-        <VBtn v-bind="props" :icon="isAuthorized ? 'mdi-account' : 'mdi-account-outline'" />
+        <VBtn v-bind="props" :icon="isAuthorized ? mdiAccount : mdiAccountOutline" />
       </template>
       <VCard>
         <template v-if="isAuthorized">
@@ -38,7 +38,7 @@
                   <VTextField
                     name="username"
                     required
-                    prepend-inner-icon="mdi-email-outline"
+                    :prepend-inner-icon="mdiEmailOutline"
                     :label="t('oauth.username')"
                     :counter="length"
                     v-model="form.model.username"
@@ -46,8 +46,8 @@
                   <VTextField
                     name="password"
                     required
-                    prepend-inner-icon="mdi-lock-outline"
-                    :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
+                    :prepend-inner-icon="mdiLockOutline"
+                    :append-inner-icon="visible ? mdiEyeOff : mdiEye"
                     :type="visible ? 'text' : 'password'"
                     :label="t('oauth.password')"
                     :counter="length"
@@ -98,6 +98,7 @@
   import { useOAuth, useOAuthUser } from '@/module'
   import { ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
 
   const length = 128
   const { t } = useI18n()
