@@ -5,8 +5,6 @@ import { createApp as createCSRApp, createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createVuetify } from 'vuetify'
 import { md1 } from 'vuetify/blueprints'
-import { createVueI18nAdapter } from 'vuetify/locale/adapters/vue-i18n'
-import { createI18n, useI18n } from 'vue-i18n'
 import App from '@/App.vue'
 import { createMemoryHistory, createRouter, createWebHistory } from 'vue-router'
 import { de, en } from '@/i18n'
@@ -62,21 +60,10 @@ export const createApp = (req?: any) => {
       }
     ]
   })
-  const i18n = createI18n({
-    legacy: false,
-    fallbackLocale: 'en',
-    messages: {
-      en,
-      de
-    },
-    fallbackWarn: false,
-    missingWarn: false
-  })
   const pinia = createPinia()
   app
     .use(pinia)
     .use(router)
-    .use(i18n)
     .use(oauth)
     .use(
       createVuetify({
@@ -93,7 +80,11 @@ export const createApp = (req?: any) => {
         },
         blueprint: md1,
         locale: {
-          adapter: createVueI18nAdapter({ i18n, useI18n } as any)
+          locale: globalThis.navigator?.language?.split('-')?.[0] || 'en',
+          fallback: 'en',
+          messages: {
+            en, de
+          }
         },
         defaults: {
           VTextField: {

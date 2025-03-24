@@ -1,4 +1,7 @@
+import { en as vEn} from 'vuetify/locale'
+
 export const en = {
+  ...vEn,
   oauth: {
     login: 'Login',
     logout: 'Logout',

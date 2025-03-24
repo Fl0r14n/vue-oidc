@@ -21,7 +21,7 @@
           </template>
           <VCardActions>
             <VSpacer />
-            <VBtn @click="signOut()">{{ t('oauth.logout') }}</VBtn>
+            <VBtn @click="signOut()">{{ t('$vuetify.oauth.logout') }}</VBtn>
           </VCardActions>
         </template>
         <template v-else>
@@ -39,7 +39,7 @@
                     name="username"
                     required
                     :prepend-inner-icon="mdiEmailOutline"
-                    :label="t('oauth.username')"
+                    :label="t('$vuetify.oauth.username')"
                     :counter="length"
                     v-model="form.model.username"
                     :rules="form.rules.username" />
@@ -49,7 +49,7 @@
                     :prepend-inner-icon="mdiLockOutline"
                     :append-inner-icon="visible ? mdiEyeOff : mdiEye"
                     :type="visible ? 'text' : 'password'"
-                    :label="t('oauth.password')"
+                    :label="t('$vuetify.oauth.password')"
                     :counter="length"
                     v-model="form.model.password"
                     :rules="form.rules.password"
@@ -58,7 +58,7 @@
                 <VCardActions>
                   <VSpacer />
                   <VBtn type="submit" :disabled="!form.valid">
-                    {{ t('oauth.login') }}
+                    {{ t('$vuetify.oauth.login') }}
                   </VBtn>
                 </VCardActions>
               </VForm>
@@ -67,7 +67,7 @@
               <VCardActions>
                 <VSpacer />
                 <VBtn @click="login({ responseType: responseType || type, redirectUri: getRedirectUri(), state })">
-                  {{ t('oauth.login') }}
+                  {{ t('$vuetify.oauth.login') }}
                 </VBtn>
               </VCardActions>
             </template>
@@ -97,11 +97,11 @@
   import { OAuthType } from '@/models'
   import { useOAuth, useOAuthUser } from '@/module'
   import { ref, watch } from 'vue'
-  import { useI18n } from 'vue-i18n'
   import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
+  import { useLocale } from 'vuetify'
 
   const length = 128
-  const { t } = useI18n()
+  const { t } = useLocale()
   const { login, logout, isAuthorized, hasError, errorDescription } = useOAuth()
   const user = useOAuthUser()
   const props = withDefaults(
@@ -128,18 +128,18 @@
     },
     rules: {
       username: [
-        (v: string) => !!v || t('oauth.usernameRequired'),
-        (v: string) => (v && v.length <= length) || t('oauth.usernameLength', [length])
+        (v: string) => !!v || t('$vuetify.oauth.usernameRequired'),
+        (v: string) => (v && v.length <= length) || t('$vuetify.oauth.usernameLength', [length])
       ],
       password: [
-        (v: string) => !!v || t('oauth.passwordRequired'),
-        (v: string) => (v && v.length <= length) || t('oauth.passwordLength', [length])
+        (v: string) => !!v || t('$vuetify.oauth.passwordRequired'),
+        (v: string) => (v && v.length <= length) || t('$vuetify.oauth.passwordLength', [length])
       ]
     }
   })
 
   const signIn = async () => {
-    let { valid, model } = form.value
+    const { valid, model } = form.value
     if (valid) {
       await login(model)
       f.value?.reset()
