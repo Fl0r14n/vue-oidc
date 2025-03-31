@@ -124,14 +124,14 @@ export const oauthCallback = async (url?: string) => {
 }
 
 const autoconfigOauth = async () => {
-  const { issuerPath, tokenPath } = config.value as OpenIdConfig
+  const { issuerPath, tokenPath, pkce } = config.value as OpenIdConfig
   if (!tokenPath && issuerPath) {
     const v = await getOpenIDConfiguration()
     config.value = {
       ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
       ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
       ...((v?.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
-      ...((v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) || {}),
+      ...((pkce === undefined && v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) || {}),
       ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
       ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
       ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),

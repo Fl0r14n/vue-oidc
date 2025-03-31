@@ -28,7 +28,7 @@ export type AuthorizationCodeConfig = ResourceConfig & {
 }
 
 export type AuthorizationCodePKCEConfig = AuthorizationCodeConfig & {
-  pkce: boolean
+  pkce?: boolean
 }
 
 export type OpenIdConfig = AuthorizationCodePKCEConfig & {

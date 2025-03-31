@@ -22,7 +22,8 @@ const {
   VITE_OAUTH_LOGOUT_PATH,
   VITE_OAUTH_CLIENT_ID,
   VITE_OAUTH_CLIENT_SECRET,
-  VITE_OAUTH_SCOPE
+  VITE_OAUTH_SCOPE,
+  VITE_OAUTH_PKCE
 } = import.meta.env
 
 // eslint-disable-next-line
@@ -36,9 +37,11 @@ export const createApp = (req?: any) => {
       clientId: VITE_OAUTH_CLIENT_ID,
       clientSecret: VITE_OAUTH_CLIENT_SECRET,
       scope: VITE_OAUTH_SCOPE,
-      pkce: true //force it here cuz oauth_toolkit does not populate it in discovery
+      // pkce: true //force it here cuz oauth_toolkit does not populate it in discovery
+      pkce: VITE_OAUTH_PKCE && JSON.parse(VITE_OAUTH_PKCE),
     }
   })
+  console.log(oauth.config.value)
   const app = (SSR && createSSRApp(App)) || createCSRApp(App)
   const router = createRouter({
     history: SSR ? createMemoryHistory(BASE_URL) : createWebHistory(BASE_URL),
