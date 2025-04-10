@@ -1,4 +1,5 @@
 import { type App, type Ref } from 'vue'
+import type { AxiosInstance } from 'axios'
 
 export type ClientCredentialConfig = {
   tokenPath: string
@@ -6,9 +7,10 @@ export type ClientCredentialConfig = {
   clientId: string
   clientSecret?: string
   scope?: string
+  userPath?: string
 }
 
-export type ResourceConfig = ClientCredentialConfig
+export type ResourceOwnerConfig = ClientCredentialConfig
 
 export type ImplicitConfig = {
   authorizePath: string
@@ -18,9 +20,10 @@ export type ImplicitConfig = {
   logoutPath?: string
   redirectUri?: string // if not using OAuthParameters
   logoutRedirectUri?: string // if not using OAuthParameters
+  userPath?: string
 }
 
-export type AuthorizationCodeConfig = ResourceConfig & {
+export type AuthorizationCodeConfig = ResourceOwnerConfig & {
   authorizePath: string
   logoutPath?: string
   redirectUri?: string // if not using OAuthParameters
@@ -35,24 +38,24 @@ export type OpenIdConfig = AuthorizationCodePKCEConfig & {
   issuerPath: string
 }
 
-export type ResourceParameters = {
+export type ResourceOwnerParameters = {
   username: string
   password: string
 }
 
-export type AuthorizationParameters = {
+export type AuthorizationCodeParameters = {
   redirectUri: string
   responseType: OAuthType.IMPLICIT | OAuthType.AUTHORIZATION_CODE | string
   state?: string
 }
 
-export type OAuthParameters = ResourceParameters | AuthorizationParameters
+export type OAuthParameters = ResourceOwnerParameters | AuthorizationCodeParameters
 export type OAuthTypeConfig =
   | OpenIdConfig
   | AuthorizationCodePKCEConfig
   | AuthorizationCodeConfig
   | ImplicitConfig
-  | ResourceConfig
+  | ResourceOwnerConfig
   | ClientCredentialConfig
 
 export type OAuthConfig = {
@@ -81,7 +84,7 @@ export type OAuthToken = {
   expires_in?: number | string
   refresh_expires_in?: number | string
   scope?: string
-  codeVerifier?: string
+  code_verifier?: string
   nonce?: string
   type?: OAuthType
   expires?: number
@@ -131,7 +134,18 @@ export type IntrospectInfo = UserInfo & {
   exp: number
 }
 
+export interface OAuthFunctions {
+  refresh: (token?: OAuthToken) => Promise<OAuthToken>
+  revoke: (token?: OAuthToken) => Promise<void>
+  authorize: (token?: OAuthToken) => Promise<OAuthToken>
+  resourceOwnerLogin: (parameters: ResourceOwnerParameters) => Promise<OAuthToken>
+  clientCredentialLogin: () => Promise<OAuthToken>
+  openIdConfiguration: (issuer?: string) => Promise<OpenIdConfiguration>
+  userInfo: (userPath?: string, instance?: AxiosInstance) => Promise<UserInfo>
+}
+
 export interface OAuth {
   install: (app: App) => void
   config: Ref<OAuthConfig>
+  functions: OAuthFunctions
 }

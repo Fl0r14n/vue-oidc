@@ -7,5 +7,5 @@
   const redirectUri = `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/oauth_callback`
   const logoutRedirectUri = `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/`
   const type = import.meta.env.VITE_OAUTH_TYPE || 'code'
-  const state = import.meta.env.VITE_OAUTH_STATE || 'some_dummy_state'
+  const state = import.meta.env.VITE_OAUTH_STATE || crypto.randomUUID()
 </script>

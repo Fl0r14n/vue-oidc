@@ -7,12 +7,12 @@ export const oauthConfig = ref<OAuthConfig>({
 })
 
 export const config = computed({
-  get: () => oauthConfig.value.config as OAuthTypeConfig,
+  get: () => oauthConfig.value.config,
   set: config =>
     (oauthConfig.value.config = {
       ...oauthConfig.value.config,
       ...config
-    })
+    } as OAuthTypeConfig)
 })
 
 export const ignoredPaths = computed(() => oauthConfig.value.ignorePaths)

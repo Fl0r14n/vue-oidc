@@ -1,6 +1,6 @@
 import { config } from '@/config'
-import { authorize, clientCredentialLogin, getOpenIDConfiguration, resourceLogin, revoke } from '@/http'
-import type { AuthorizationParameters, OAuthParameters, OpenIdConfig, ResourceParameters } from '@/models'
+import { oauthFunctions } from '@/functions'
+import type { AuthorizationCodeParameters, OAuthParameters, OpenIdConfig, ResourceOwnerParameters } from '@/models'
 import { OAuthType } from '@/models'
 import { token } from '@/token'
 import { jwt } from '@/user'
@@ -39,19 +39,19 @@ const checkNonce = (parameters: Record<string, string>) => {
 
 const generateCodeChallenge = async (doPkce: any) => {
   if (doPkce) {
-    const codeVerifier = randomString()
-    token.value = { ...token.value, codeVerifier }
-    return `&code_challenge=${await pkce(codeVerifier)}&code_challenge_method=S256`
+    const code_verifier = randomString()
+    token.value = { ...token.value, code_verifier }
+    return `&code_challenge=${await pkce(code_verifier)}&code_challenge_method=S256`
   }
   return ''
 }
 
-const toAuthorizationUrl = async (parameters: AuthorizationParameters) => {
+const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
   const { authorizePath, clientId, scope, pkce } = config.value as any
   let authorizationUrl = `${authorizePath}`
   authorizationUrl += (authorizePath.includes('?') && '&') || '?'
   authorizationUrl += `client_id=${clientId}`
-  token.value = { ...token.value, redirectUri: parameters.redirectUri }
+  token.value = { ...token.value, redirect_uri: parameters.redirectUri }
   authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
   authorizationUrl += `&response_type=${parameters.responseType}`
   authorizationUrl += `&scope=${encodeURIComponent(scope || '')}`
@@ -74,12 +74,12 @@ export const state = ref<string>()
 
 export const login = async (parameters?: OAuthParameters) => {
   await autoconfigOauth()
-  if (!!parameters && (parameters as ResourceParameters).password) {
-    token.value = await resourceLogin(parameters as ResourceParameters)
-  } else if (!!parameters && (parameters as AuthorizationParameters).redirectUri && (parameters as AuthorizationParameters).responseType) {
-    await toAuthorizationUrl(parameters as AuthorizationParameters)
+  if (!!parameters && (parameters as ResourceOwnerParameters).password) {
+    token.value = await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters)
+  } else if (!!parameters && (parameters as AuthorizationCodeParameters).redirectUri && (parameters as AuthorizationCodeParameters).responseType) {
+    await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
   } else {
-    token.value = await clientCredentialLogin()
+    token.value = await oauthFunctions.clientCredentialLogin()
   }
 }
 
@@ -93,7 +93,7 @@ export const logout = async (logoutRedirectUri?: string) => {
     token.value = {}
     globalThis.location?.replace(logoutUrl)
   } else {
-    await revoke(token.value)
+    await oauthFunctions.revoke(token.value)
     token.value = {}
   }
 }
@@ -119,14 +119,14 @@ export const oauthCallback = async (url?: string) => {
     }
     state.value = parameters?.state
     await autoconfigOauth()
-    await checkCode(token.value?.code)
+    await checkCode()
   }
 }
 
 const autoconfigOauth = async () => {
   const { issuerPath, tokenPath, pkce } = config.value as OpenIdConfig
   if (!tokenPath && issuerPath) {
-    const v = await getOpenIDConfiguration()
+    const v = await oauthFunctions.openIdConfiguration(issuerPath)
     config.value = {
       ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
       ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
@@ -140,12 +140,11 @@ const autoconfigOauth = async () => {
   }
 }
 
-const checkCode = async (code?: string) => {
+const checkCode = async () => {
   const { tokenPath } = config.value as OpenIdConfig
-  const { codeVerifier, redirectUri } = token.value || {} //should be set by authorizationUrl construction
-  const { origin, pathname } = globalThis.location || {}
+  const { code } = token.value || {}
   if (code && tokenPath) {
-    const parameters = await authorize(code, redirectUri || `${origin}${pathname}`, codeVerifier)
+    const parameters = await oauthFunctions.authorize(token.value)
     token.value = checkNonce(parameters)
   }
 }

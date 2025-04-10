@@ -95,13 +95,10 @@ To use the component correctly, make sure of the following:
 
 ```typescript
 import 'vue-oidc/dist/vue-oidc.css'
-import '@mdi/font/scss/materialdesignicons.scss'
-import 'vuetify/styles'
 
 import { createVuetify } from 'vuetify'
 import { createI18n, useI18n } from 'vue-i18n'
 import { createVueI18nAdapter } from 'vuetify/locale/adapters/vue-i18n'
-import { md1 } from 'vuetify/blueprints'
 
 const i18n = createI18n({
   messages: {
@@ -123,8 +120,7 @@ const i18n = createI18n({
 app.use(i18n).use(createVuetify({
   locale: {
     adapter: createVueI18nAdapter({ i18n, useI18n } as any)
-  },
-  blueprint: md1,
+  }
 }))
 ```
 

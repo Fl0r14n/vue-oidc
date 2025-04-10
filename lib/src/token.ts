@@ -2,8 +2,8 @@ import type { OAuthToken } from '@/models'
 import { OAuthStatus } from '@/models'
 import { computed, watch } from 'vue'
 import { storageKey } from '@/config'
-import { refresh } from '@/http'
 import { storageRef } from '@/ref'
+import { oauthFunctions } from '@/functions'
 
 export const token = storageRef<OAuthToken>(storageKey, {})
 
@@ -18,10 +18,8 @@ watch(token, async t => {
         ...{ expires: Date.now() + expiresIn * 1000 }
       }
     } else if (isExpiredToken(t)) {
-      const { type } = token.value
       token.value = {
-        ...(await refresh(token.value)),
-        type
+        ...(await oauthFunctions.refresh(token.value))
       }
     }
   }

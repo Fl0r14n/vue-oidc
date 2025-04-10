@@ -1,4 +1,5 @@
 import { config, ignoredPaths, oauthConfig, storageKey } from '@/config'
+import { oauthFunctions } from '@/functions'
 import type { OAuth, OAuthConfig } from '@/models'
 import { login, logout, oauthCallback } from '@/oauth'
 import {
@@ -27,11 +28,13 @@ export const createOAuth = (cfg?: OAuthConfig) => {
       app.provide('logout', logout)
       app.provide('oauth-callback', oauthCallback)
     },
-    config: oauthConfig
+    config: oauthConfig,
+    functions: oauthFunctions
   } as OAuth
 }
 
 export const useOAuthConfig = () => oauthConfig
+export const useOAuthFunctions = () => oauthFunctions
 export const useOAuthToken = () => token
 export const useOAuthUser = () => user
 export const useOAuthHttp = () => http

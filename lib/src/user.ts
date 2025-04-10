@@ -1,9 +1,9 @@
 import { config, ignoredPaths } from '@/config'
-import { refresh } from '@/http'
 import type { UserInfo } from '@/models'
 import { accessToken, isAuthorized, isExpiredToken, token } from '@/token'
 import axios, { type InternalAxiosRequestConfig, type RawAxiosRequestHeaders } from 'axios'
 import { ref, watch } from 'vue'
+import { oauthFunctions } from '@/functions'
 
 const HEADER_JSON: RawAxiosRequestHeaders = {
   'Content-Type': 'application/json'
@@ -31,10 +31,8 @@ export const http = axios.create({
 export const authorizationInterceptor = async (req: InternalAxiosRequestConfig) => {
   if (!isPathIgnored(req)) {
     if (isExpiredToken(token.value)) {
-      const { type } = token.value
       token.value = {
-        ...(await refresh(token.value)),
-        type
+        ...(await oauthFunctions.refresh(token.value)),
       }
     }
     if (accessToken.value) {
@@ -53,14 +51,6 @@ export const unauthorizedInterceptor = (error: any) => {
 
 http.interceptors.request.use(authorizationInterceptor)
 http.interceptors.response.use(res => res, unauthorizedInterceptor)
-
-const getUser = async () => {
-  const { userPath } = config.value as any
-  return http
-    .get(userPath)
-    .catch(err => err?.response)
-    .then(r => r?.data as UserInfo)
-}
 
 export const jwt = (token?: string) =>
   token
@@ -87,7 +77,7 @@ watch(
 
 watch([isAuthorized, () => (config.value as any)?.userPath], async ([authorized, userPath]) => {
   if (authorized && userPath) {
-    const usr = await getUser()
+    const usr = await oauthFunctions.userInfo(userPath, http)
     if (usr) {
       user.value = usr
     }
