@@ -1,7 +1,7 @@
-import type { OAuthToken } from '@/models'
+import type { OAuthToken, OpenIdConfig } from '@/models'
 import { OAuthStatus } from '@/models'
 import { computed, watch } from 'vue'
-import { storageKey } from '@/config'
+import { config, storageKey } from '@/config'
 import { storageRef } from '@/ref'
 import { oauthFunctions } from '@/functions'
 
@@ -19,7 +19,7 @@ watch(token, async t => {
       }
     } else if (isExpiredToken(t)) {
       token.value = {
-        ...(await oauthFunctions.refresh(token.value))
+        ...(await oauthFunctions.refresh(token.value, config.value as OpenIdConfig)),
       }
     }
   }

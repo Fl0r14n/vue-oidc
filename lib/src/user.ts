@@ -1,5 +1,5 @@
 import { config, ignoredPaths } from '@/config'
-import type { UserInfo } from '@/models'
+import type { OpenIdConfig, UserInfo } from '@/models'
 import { accessToken, isAuthorized, isExpiredToken, token } from '@/token'
 import axios, { type InternalAxiosRequestConfig, type RawAxiosRequestHeaders } from 'axios'
 import { ref, watch } from 'vue'
@@ -32,7 +32,7 @@ export const authorizationInterceptor = async (req: InternalAxiosRequestConfig) 
   if (!isPathIgnored(req)) {
     if (isExpiredToken(token.value)) {
       token.value = {
-        ...(await oauthFunctions.refresh(token.value)),
+        ...(await oauthFunctions.refresh(token.value, config.value as OpenIdConfig)),
       }
     }
     if (accessToken.value) {
