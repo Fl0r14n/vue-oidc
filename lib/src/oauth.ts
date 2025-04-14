@@ -1,6 +1,13 @@
 import { config } from '@/config'
 import { oauthFunctions } from '@/functions'
-import type { AuthorizationCodeParameters, OAuthParameters, OpenIdConfig, ResourceOwnerParameters } from '@/models'
+import type {
+  AuthorizationCodeParameters,
+  ClientCredentialConfig,
+  OAuthParameters,
+  OpenIdConfig,
+  ResourceOwnerConfig,
+  ResourceOwnerParameters
+} from '@/models'
 import { OAuthType } from '@/models'
 import { token } from '@/token'
 import { jwt } from '@/user'
@@ -75,17 +82,17 @@ export const state = ref<string>()
 export const login = async (parameters?: OAuthParameters) => {
   await autoconfigOauth()
   if (!!parameters && (parameters as ResourceOwnerParameters).password) {
-    token.value = await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters)
+    token.value = await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters, config.value as ResourceOwnerConfig) || {}
   } else if (!!parameters && (parameters as AuthorizationCodeParameters).redirectUri && (parameters as AuthorizationCodeParameters).responseType) {
     await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
   } else {
-    token.value = await oauthFunctions.clientCredentialLogin()
+    token.value = await oauthFunctions.clientCredentialLogin(config.value as ClientCredentialConfig) || {}
   }
 }
 
 export const logout = async (logoutRedirectUri?: string) => {
   await autoconfigOauth()
-  const { logoutPath, clientId } = config.value as any
+  const { logoutPath, clientId } = (config.value as OpenIdConfig) || {}
   if (logoutRedirectUri && logoutPath) {
     const { id_token } = token.value
     const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
@@ -93,7 +100,7 @@ export const logout = async (logoutRedirectUri?: string) => {
     token.value = {}
     globalThis.location?.replace(logoutUrl)
   } else {
-    await oauthFunctions.revoke(token.value)
+    await oauthFunctions.revoke(token.value, config.value as OpenIdConfig)
     token.value = {}
   }
 }
@@ -124,9 +131,8 @@ export const oauthCallback = async (url?: string) => {
 }
 
 const autoconfigOauth = async () => {
-  const { issuerPath, tokenPath, pkce } = config.value as OpenIdConfig
-  if (!tokenPath && issuerPath) {
-    const v = await oauthFunctions.openIdConfiguration(issuerPath)
+  const v = await oauthFunctions.openIdConfiguration(config.value as OpenIdConfig)
+  if (v) {
     config.value = {
       ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
       ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
@@ -136,15 +142,13 @@ const autoconfigOauth = async () => {
       ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
       ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
       ...{ scope: config.value?.scope || 'openid' }
-    } as OpenIdConfig
+    }
   }
 }
 
 const checkCode = async () => {
-  const { tokenPath } = config.value as OpenIdConfig
-  const { code } = token.value || {}
-  if (code && tokenPath) {
-    const parameters = await oauthFunctions.authorize(token.value)
+  const parameters = await oauthFunctions.authorize(token.value, config.value as OpenIdConfig)
+  if (parameters) {
     token.value = checkNonce(parameters)
   }
 }

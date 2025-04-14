@@ -8,6 +8,7 @@ export type ClientCredentialConfig = {
   clientSecret?: string
   scope?: string
   userPath?: string
+  introspectionPath?: string
 }
 
 export type ResourceOwnerConfig = ClientCredentialConfig
@@ -135,13 +136,14 @@ export type IntrospectInfo = UserInfo & {
 }
 
 export interface OAuthFunctions {
-  refresh: (token?: OAuthToken) => Promise<OAuthToken>
-  revoke: (token?: OAuthToken) => Promise<void>
-  authorize: (token?: OAuthToken) => Promise<OAuthToken>
-  resourceOwnerLogin: (parameters: ResourceOwnerParameters) => Promise<OAuthToken>
-  clientCredentialLogin: () => Promise<OAuthToken>
-  openIdConfiguration: (issuer?: string) => Promise<OpenIdConfiguration>
-  userInfo: (userPath?: string, instance?: AxiosInstance) => Promise<UserInfo>
+  refresh: (token?: OAuthToken, config?: OpenIdConfig) => Promise<OAuthToken | undefined>
+  revoke: (token?: OAuthToken, config?: OpenIdConfig) => Promise<void>
+  authorize: (token?: OAuthToken, config?: OpenIdConfig) => Promise<OAuthToken | undefined>
+  resourceOwnerLogin: (parameters: ResourceOwnerParameters, config?: ResourceOwnerConfig) => Promise<OAuthToken | undefined>
+  clientCredentialLogin: (config?: ClientCredentialConfig) => Promise<OAuthToken | undefined>
+  openIdConfiguration: (config?: OpenIdConfig) => Promise<OpenIdConfiguration | undefined>
+  userInfo: (config?: OpenIdConfig, instance?: AxiosInstance) => Promise<UserInfo | undefined>
+  introspect: (token?: OAuthToken, config?: OpenIdConfig) => Promise<IntrospectInfo | undefined>
 }
 
 export interface OAuth {

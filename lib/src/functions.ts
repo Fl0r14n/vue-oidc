@@ -1,39 +1,36 @@
-import { config } from '@/config'
 import type { OAuthFunctions } from '@/models'
 import { OAuthType } from '@/models'
 import axios, { type RawAxiosRequestHeaders } from 'axios'
 
-const HEADER_APPLICATION: RawAxiosRequestHeaders = {
-  'Content-Type': 'application/x-www-form-urlencoded'
+const HEADERS: RawAxiosRequestHeaders = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'Accept': 'application/json'
 }
 
 export const oauthFunctions: OAuthFunctions = {
-  refresh: async (token) => {
-    const { tokenPath, clientId, clientSecret, scope } = (config.value as any) || ({} as any)
+  refresh: async (token, config) => {
+    const { tokenPath, clientId, clientSecret, scope } = config || {}
     const { refresh_token, type } = token || {}
-    if (refresh_token) {
-      return await axios
-        .post(
-          tokenPath,
-          {
-            client_id: clientId,
-            ...((clientSecret && { client_secret: clientSecret }) || {}),
-            grant_type: 'refresh_token',
-            refresh_token,
-            ...((scope && { scope }) || {})
-          },
-          {
-            headers: HEADER_APPLICATION
-          }
-        )
-        .catch(err => err.response)
-        .then(r => r?.data)
-        .then(t => ({ ...t, type }))
-    }
-    return token
+    return refresh_token && tokenPath && await axios
+      .post(
+        tokenPath,
+        {
+          client_id: clientId,
+          ...((clientSecret && { client_secret: clientSecret }) || {}),
+          grant_type: 'refresh_token',
+          refresh_token,
+          ...((scope && { scope }) || {})
+        },
+        {
+          headers: HEADERS
+        }
+      )
+      .catch(err => err.response)
+      .then(r => r?.data)
+      .then(t => ({ ...t, type })) || token
   },
-  revoke: async (token) => {
-    const { revokePath, clientId, clientSecret } = config.value as any
+  revoke: async (token, config) => {
+    const { revokePath, clientId, clientSecret } = config || {}
     if (revokePath) {
       const { access_token, refresh_token } = token || {}
       if (access_token) {
@@ -47,7 +44,7 @@ export const oauthFunctions: OAuthFunctions = {
               token_type_hint: 'access_token'
             },
             {
-              headers: HEADER_APPLICATION
+              headers: HEADERS
             }
           )
           .then(r => r?.data)
@@ -63,7 +60,7 @@ export const oauthFunctions: OAuthFunctions = {
               token_type_hint: 'refresh_token'
             },
             {
-              headers: HEADER_APPLICATION
+              headers: HEADERS
             }
           )
           .catch(err => err.response)
@@ -71,10 +68,10 @@ export const oauthFunctions: OAuthFunctions = {
       }
     }
   },
-  authorize: async (token) => {
-    const { clientId, clientSecret, tokenPath, scope } = config.value as any
+  authorize: async (token, config) => {
+    const { clientId, clientSecret, tokenPath, scope } = config || {}
     const { code, redirect_uri, code_verifier } = token || {}
-    return axios
+    return code && tokenPath && await axios
       .post(
         tokenPath,
         {
@@ -87,16 +84,16 @@ export const oauthFunctions: OAuthFunctions = {
           ...((code_verifier && { code_verifier }) || {})
         },
         {
-          headers: HEADER_APPLICATION
+          headers: HEADERS
         }
       )
       .catch(err => err.response)
       .then(r => r?.data)
-      .then(t => ({ ...t, type: OAuthType.AUTHORIZATION_CODE }))
+      .then(t => ({ ...t, type: OAuthType.AUTHORIZATION_CODE })) || token
   },
-  clientCredentialLogin: async () => {
-    const { clientId, clientSecret, tokenPath, scope } = (config.value as any) || ({} as any)
-    return axios
+  clientCredentialLogin: async (config) => {
+    const { clientId, clientSecret, tokenPath, scope } = config || {}
+    return tokenPath && await axios
       .post(
         tokenPath,
         {
@@ -106,17 +103,17 @@ export const oauthFunctions: OAuthFunctions = {
           ...(scope ? { scope } : {})
         },
         {
-          headers: HEADER_APPLICATION
+          headers: HEADERS
         }
       )
       .catch(err => err.response)
       .then(r => r?.data)
-      .then(t => ({ ...t, type: OAuthType.CLIENT_CREDENTIAL }))
+      .then(t => ({ ...t, type: OAuthType.CLIENT_CREDENTIAL })) || undefined
   },
-  resourceOwnerLogin: async (parameters) => {
-    const { clientId, clientSecret, tokenPath, scope } = config.value as any
+  resourceOwnerLogin: async (parameters, config) => {
+    const { clientId, clientSecret, tokenPath, scope } = config || {}
     const { username, password } = parameters
-    return axios
+    return tokenPath && clientId && await axios
       .post(
         tokenPath,
         {
@@ -128,25 +125,44 @@ export const oauthFunctions: OAuthFunctions = {
           password
         },
         {
-          headers: HEADER_APPLICATION
+          headers: HEADERS
         }
       )
       .catch(err => err.response)
       .then(r => r?.data)
-      .then(t => ({ ...t, type: OAuthType.RESOURCE }))
+      .then(t => ({ ...t, type: OAuthType.RESOURCE })) || undefined
   },
-  openIdConfiguration: async (issuer) => {
-    const { issuerPath, clientId } = config.value as any
-    return axios
-      .get(`${issuer || issuerPath}/.well-known/openid-configuration?client_id=${clientId}`)
+  openIdConfiguration: async (config) => {
+    const { issuerPath, clientId } = config || {}
+    return issuerPath && await axios
+      .get(`${issuerPath}/.well-known/openid-configuration?client_id=${clientId}`)
       .catch(err => err.response)
-      .then(r => r?.data)
+      .then(r => r?.data) || undefined
   },
-  userInfo: async (path, http) => {
-    const { userPath } = config.value || {}
-    return (http || axios)
-      .get(`${path || userPath}`)
+  userInfo: async (config, http) => {
+    const { userPath } = config || {}
+    return userPath && await (http || axios)
+      .get(userPath)
       .catch(err => err?.response)
-      .then(r => r?.data)
+      .then(r => r?.data) || undefined
+  },
+  introspect: async (token, config) => {
+    const { introspectionPath, clientId, clientSecret } = config || {}
+    const { access_token } = token || {}
+    return introspectionPath && access_token && clientId && await axios
+      .post(
+        introspectionPath,
+        {
+          token: access_token
+        },
+        {
+          headers: {
+            ...HEADERS,
+            'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
+          }
+        }
+      )
+      .catch(err => err.response)
+      .then(r => r?.data) || undefined
   }
 }
