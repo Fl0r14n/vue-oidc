@@ -1,5 +1,6 @@
-import { config } from '@/config'
-import { oauthFunctions } from '@/functions'
+import { ref } from 'vue'
+import { config } from './config'
+import { oauthFunctions } from './functions'
 import type {
   AuthorizationCodeParameters,
   ClientCredentialConfig,
@@ -7,11 +8,10 @@ import type {
   OpenIdConfig,
   ResourceOwnerConfig,
   ResourceOwnerParameters
-} from '@/models'
-import { OAuthType } from '@/models'
-import { token } from '@/token'
-import { jwt } from '@/user'
-import { ref } from 'vue'
+} from './models'
+import { OAuthType } from './models'
+import { token } from './token'
+import { jwt } from './user'
 
 const arrToString = (buf: Uint8Array) => buf.reduce((s, b) => s + String.fromCharCode(b), '')
 const base64url = (str: string) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
@@ -82,11 +82,16 @@ export const state = ref<string>()
 export const login = async (parameters?: OAuthParameters) => {
   await autoconfigOauth()
   if (!!parameters && (parameters as ResourceOwnerParameters).password) {
-    token.value = await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters, config.value as ResourceOwnerConfig) || {}
-  } else if (!!parameters && (parameters as AuthorizationCodeParameters).redirectUri && (parameters as AuthorizationCodeParameters).responseType) {
+    token.value =
+      (await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters, config.value as ResourceOwnerConfig)) || {}
+  } else if (
+    !!parameters &&
+    (parameters as AuthorizationCodeParameters).redirectUri &&
+    (parameters as AuthorizationCodeParameters).responseType
+  ) {
     await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
   } else {
-    token.value = await oauthFunctions.clientCredentialLogin(config.value as ClientCredentialConfig) || {}
+    token.value = (await oauthFunctions.clientCredentialLogin(config.value as ClientCredentialConfig)) || {}
   }
 }
 
@@ -137,7 +142,9 @@ const autoconfigOauth = async () => {
       ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
       ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
       ...((v?.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
-      ...((pkce === undefined && v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) || {}),
+      ...((pkce === undefined &&
+        v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) ||
+        {}),
       ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
       ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
       ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),

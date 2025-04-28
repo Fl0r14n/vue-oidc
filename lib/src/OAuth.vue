@@ -32,8 +32,7 @@
           </template>
           <template v-else>
             <template v-if="type === OAuthType.RESOURCE">
-              <VForm ref="f" v-model="form.valid" lazy-validation autocomplete="on" @submit.prevent="signIn()"
-                     @keyup.enter="signIn()">
+              <VForm ref="f" v-model="form.valid" lazy-validation autocomplete="on" @submit.prevent="signIn()" @keyup.enter="signIn()">
                 <VCardText class="pb-0 oauth-form">
                   <VTextField
                     name="username"
@@ -94,8 +93,8 @@
     VSpacer,
     VTextField
   } from 'vuetify/components'
-  import { OAuthType } from '@/models'
-  import { useOAuth, useOAuthUser } from '@/module'
+  import { OAuthType } from './models'
+  import { useOAuth, useOAuthUser } from './module'
   import { ref, watch } from 'vue'
   import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
   import { useLocale } from 'vuetify'

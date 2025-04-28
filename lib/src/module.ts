@@ -1,20 +1,10 @@
-import { config, ignoredPaths, oauthConfig, storageKey } from '@/config'
-import { oauthFunctions } from '@/functions'
-import type { OAuth, OAuthConfig } from '@/models'
-import { login, logout, oauthCallback } from '@/oauth'
-import {
-  accessToken,
-  error,
-  errorDescription,
-  hasError,
-  isAuthorized,
-  isExpiredToken,
-  status,
-  token,
-  type
-} from '@/token'
+import { accessToken, error, errorDescription, hasError, isAuthorized, isExpiredToken, status, token, type } from '@/token'
 import { authorizationInterceptor, http, unauthorizedInterceptor, user } from '@/user'
 import type { App } from 'vue'
+import { config, ignoredPaths, oauthConfig, storageKey } from './config'
+import { oauthFunctions } from './functions'
+import type { OAuth, OAuthConfig } from './models'
+import { login, logout, oauthCallback } from './oauth'
 
 export const createOAuth = (cfg?: OAuthConfig) => {
   oauthConfig.value = {
