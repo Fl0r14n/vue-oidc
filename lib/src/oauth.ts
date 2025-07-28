@@ -127,7 +127,7 @@ export const oauthCallback = async (url?: string) => {
     token.value = {
       ...token.value,
       ...parameters,
-      type: OAuthType.AUTHORIZATION_CODE
+      // do not set type yet. will be set by authorize function since it is a two-step process
     }
     state.value = parameters?.state
     await autoconfigOauth()
