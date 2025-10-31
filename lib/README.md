@@ -167,7 +167,7 @@ const googleOpenIDConfig = {
 ## Installing:
 
 ```
-npm install vue-oidc --save
+bun i vue-oidc --save
 ```
 
 ## App Requirements

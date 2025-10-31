@@ -19,7 +19,7 @@
     "build:ssr:client": "vite build --ssrManifest --outDir dist/client",
     "build:ssr:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
     "build:ssr": "run-p build:lib build:ssr:*",
-    "publish": "run-s build && cd lib && npm publish"
+    "publish": "run-s build && cd lib && bun publish"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
