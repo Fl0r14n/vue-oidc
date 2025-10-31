@@ -95,14 +95,14 @@ export const login = async (parameters?: OAuthParameters) => {
   }
 }
 
-export const logout = async (logoutRedirectUri?: string) => {
+export const logout = async (logoutRedirectUri?: string, state?: string) => {
   await autoconfigOauth()
   const { logoutPath, clientId } = (config.value as OpenIdConfig) || {}
   if (logoutRedirectUri && logoutPath) {
     const { id_token } = token.value
     const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
-
-    const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${logoutRedirectUri}${tokenHint}`
+    const stateFwd = (state && `&state=${state}`) || ''
+    const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${logoutRedirectUri}${tokenHint}${stateFwd}`
     token.value = {}
     globalThis.location?.replace(logoutUrl)
   } else {
