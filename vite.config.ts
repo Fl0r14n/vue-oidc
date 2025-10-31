@@ -1,15 +1,16 @@
 import { fileURLToPath, URL } from 'node:url'
 
 import vue from '@vitejs/plugin-vue'
-import fs from 'fs'
+import { readFileSync } from 'fs'
 import { defineConfig } from 'vite'
+import vueDevTools from 'vite-plugin-vue-devtools'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 let key, cert
 
 try {
-  key = fs.readFileSync('.cert/key.pem')
-  cert = fs.readFileSync('.cert/cert.pem')
+  key = readFileSync('.cert/key.pem')
+  cert = readFileSync('.cert/cert.pem')
 } catch {
   /* empty */
 }
@@ -22,15 +23,16 @@ const https =
     }) ||
   undefined
 
+const port = Number.parseInt(process.env.PORT || '') || 3000
+
 export default defineConfig({
   plugins: [
+    vueDevTools(),
     vue({
       script: {
         propsDestructure: true
       },
-      template: {
-        transformAssetUrls
-      }
+      template: { transformAssetUrls }
     }),
     vuetify({
       autoImport: { labs: true },
@@ -39,33 +41,24 @@ export default defineConfig({
       }
     })
   ],
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: 'modern'
-      },
-      sass: {
-        api: 'modern'
-      }
-    }
-  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
-  define: { 'process.env': process.env || {} },
   ssr: {
     noExternal: [/\.css$/, /^vuetify/]
   },
   server: {
     host: true,
-    port: 3000,
+    port,
     https,
     hmr: {
       host: 'vite.local.dev',
-      port: 3000,
       protocol: 'wss'
     }
+  },
+  preview: {
+    port
   }
 })

@@ -1,4 +1,4 @@
-import { en as vEn} from 'vuetify/locale'
+import { en as vEn } from 'vuetify/locale'
 
 export const en = {
   ...vEn,

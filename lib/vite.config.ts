@@ -3,19 +3,19 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
-import dts from 'vite-plugin-dts'
+import dts from 'unplugin-dts/vite'
 
 export default defineConfig({
   plugins: [
     vue(),
-    dts({ tsconfigPath: './tsconfig.app.json', rollupTypes: true })
+    dts({ tsconfigPath: './tsconfig.app.json', processor: 'vue', bundleTypes: true })
   ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'vue-oidc'
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ['vue'],
       output: {
         globals: {
@@ -27,16 +27,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: 'modern'
-      },
-      sass: {
-        api: 'modern'
-      }
     }
   }
 })

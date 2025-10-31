@@ -1,44 +1,56 @@
-import { basename } from 'node:path'
 import { renderToString } from 'vue/server-renderer'
 import { createApp } from './main'
-import * as express from 'express'
 
-export const render = async (req: express.Request, manifest: any) => {
-  const { app, router, pinia } = createApp(req)
-  await router.push(req.originalUrl)
+const getURL = (req: any) => {
+  if (req?.url && !req?.originalUrl) {
+    return new URL(req.url)
+  }
+  let href = 'http://localhost'
+  const host =
+    req.headers['x-forwarded-host'] || req.headers['host'] || `${req.hostname}:${req.socket?.localPort || req.socket?.address().port}`
+  href = `${req.protocol}://${host}${req.originalUrl}`
+  return new URL(href)
+}
+
+const mockLocation = (req?: any): Location => {
+  const { href, origin, protocol, host, hostname, port, pathname, search, hash } = getURL(req)
+  return {
+    href,
+    origin,
+    protocol,
+    host,
+    hostname,
+    port,
+    pathname,
+    search,
+    hash,
+    reload() {},
+    assign() {},
+    ancestorOrigins: {} as any,
+    replace() {}
+  }
+}
+
+const setSSRLocation = (req?: any) => {
+  if (import.meta.env.SSR && req) {
+    globalThis.location = mockLocation(req)
+  }
+}
+
+export const render = async (req: any, manifest: any) => {
+  setSSRLocation(req)
+  const app = createApp()
+  const router = app.getRouter()
+  await router.push(`${globalThis.location.pathname}${globalThis.location.search}`)
   await router.isReady()
   const ctx: any = {}
-  const html = await renderToString(app, ctx)
-  const preloadLinks = renderPreloadLinks(ctx.modules, manifest)
-  const state = {
-    pinia: pinia.state.value
-  }
-  return [html, preloadLinks, `var state = ${JSON.stringify(state)}`]
+  const body = await renderToString(app, ctx)
+  const head = renderPreloadLinks(ctx.modules, manifest)
+  const state = app.getState()
+  return { body, head, state: `var state = ${JSON.stringify(state)}` }
 }
 
-const renderPreloadLinks = (modules: any, manifest: any) => {
-  let links = ''
-  const seen = new Set()
-  modules.forEach(id => {
-    const files = manifest[id]
-    if (files) {
-      files.forEach(file => {
-        if (!seen.has(file)) {
-          seen.add(file)
-          const filename = basename(file)
-          if (manifest[filename]) {
-            for (const depFile of manifest[filename]) {
-              links += renderPreloadLink(depFile)
-              seen.add(depFile)
-            }
-          }
-          links += renderPreloadLink(file)
-        }
-      })
-    }
-  })
-  return links
-}
+const basename = (path: string): string => path.split(/[\\/]/).pop() || ''
 
 const renderPreloadLink = (file: string) => {
   if (file.endsWith('.js')) {
@@ -58,4 +70,28 @@ const renderPreloadLink = (file: string) => {
   } else {
     return ''
   }
+}
+
+const renderPreloadLinks = (modules: any, manifest: any) => {
+  let links = ''
+  const seen = new Set()
+  modules.forEach((id: any) => {
+    const files = manifest?.[id]
+    if (files) {
+      files.forEach((file: string) => {
+        if (!seen.has(file)) {
+          seen.add(file)
+          const filename = basename(file)
+          if (manifest[filename]) {
+            for (const depFile of manifest[filename]) {
+              links += renderPreloadLink(depFile)
+              seen.add(depFile)
+            }
+          }
+          links += renderPreloadLink(file)
+        }
+      })
+    }
+  })
+  return links
 }
