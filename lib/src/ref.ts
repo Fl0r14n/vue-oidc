@@ -9,7 +9,7 @@ const set = (key: string, value: any) => {
   globalThis.localStorage?.setItem(key, JSON.stringify(value))
 }
 
-export const storageRef = <T>(key: Ref<string> | string, initial?: T, map?: (v: any) => T) => {
+export const storageRef = <T>(key: Ref<string> | string, initial?: T, map?: (v: any) => T): Ref<T> => {
   const model = ref<T>((map && map(initial)) || (initial as T))
   if (typeof key === 'string') {
     const v = get(key)
