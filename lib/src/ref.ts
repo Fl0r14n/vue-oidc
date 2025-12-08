@@ -39,5 +39,5 @@ export const storageRef = <T>(key: Ref<string> | string, initial?: T, map?: (v: 
       { immediate: true }
     )
   }
-  return model
+  return model as Ref<T>
 }

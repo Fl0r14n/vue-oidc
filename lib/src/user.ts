@@ -46,7 +46,7 @@ export const unauthorizedInterceptor = (error: any) => {
   if (401 === error.response?.status) {
     token.value = error.response.data
   }
-  return Promise.reject(error.response?.data)
+  return Promise.reject(error)
 }
 
 http.interceptors.request.use(authorizationInterceptor)
