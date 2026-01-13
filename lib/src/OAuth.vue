@@ -37,6 +37,7 @@
                   <VTextField
                     name="username"
                     required
+                    autocomplete="username"
                     :prepend-inner-icon="mdiEmailOutline"
                     :label="t('$vuetify.oauth.username')"
                     :counter="length"
@@ -45,6 +46,7 @@
                   <VTextField
                     name="password"
                     required
+                    autocomplete="current-password"
                     :prepend-inner-icon="mdiLockOutline"
                     :append-inner-icon="visible ? mdiEyeOff : mdiEye"
                     :type="visible ? 'text' : 'password'"

@@ -19,7 +19,7 @@ watch(token, async t => {
       }
     } else if (isExpiredToken(t)) {
       token.value = {
-        ...(await oauthFunctions.refresh(token.value, config.value as OpenIdConfig)),
+        ...(await oauthFunctions.refresh(token.value, config.value as OpenIdConfig))
       }
     }
   }
