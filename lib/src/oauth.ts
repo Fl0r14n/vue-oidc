@@ -127,7 +127,7 @@ export const oauthCallback = async (url?: string) => {
     const parameters = parseOauthUri((search && search.substring(1)) || (hash && hash.substring(1)))
     token.value = {
       ...token.value,
-      ...parameters,
+      ...parameters
       // do not set type yet. will be set by authorize function since it is a two-step process
     }
     state.value = parameters?.state

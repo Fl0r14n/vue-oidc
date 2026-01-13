@@ -32,7 +32,7 @@ export const authorizationInterceptor = async (req: InternalAxiosRequestConfig) 
   if (!isPathIgnored(req)) {
     if (isExpiredToken(token.value)) {
       token.value = {
-        ...(await oauthFunctions.refresh(token.value, config.value as OpenIdConfig)),
+        ...(await oauthFunctions.refresh(token.value, config.value as OpenIdConfig))
       }
     }
     if (accessToken.value) {
@@ -55,12 +55,12 @@ http.interceptors.response.use(res => res, unauthorizedInterceptor)
 export const jwt = (token?: string) =>
   token
     ? JSON.parse(
-      decodeURIComponent(
-        Array.from(atob(token.split('.')[1]))
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
+        decodeURIComponent(
+          Array.from(atob(token.split('.')[1]))
+            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        )
       )
-    )
     : {}
 
 export const user = ref<UserInfo | undefined>()
