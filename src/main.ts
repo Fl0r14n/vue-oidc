@@ -16,7 +16,6 @@ const {
   VITE_OAUTH_TOKEN_PATH,
   VITE_OAUTH_LOGOUT_PATH,
   VITE_OAUTH_CLIENT_ID,
-  VITE_OAUTH_CLIENT_SECRET,
   VITE_OAUTH_SCOPE,
   VITE_OAUTH_PKCE
 } = import.meta.env
@@ -30,7 +29,6 @@ export const createApp = () => {
       tokenPath: VITE_OAUTH_TOKEN_PATH,
       logoutPath: VITE_OAUTH_LOGOUT_PATH,
       clientId: VITE_OAUTH_CLIENT_ID,
-      clientSecret: VITE_OAUTH_CLIENT_SECRET,
       scope: VITE_OAUTH_SCOPE,
       pkce: VITE_OAUTH_PKCE && JSON.parse(VITE_OAUTH_PKCE)
     }
