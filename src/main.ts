@@ -30,7 +30,8 @@ export const createApp = () => {
       tokenPath: VITE_OAUTH_TOKEN_PATH,
       logoutPath: VITE_OAUTH_LOGOUT_PATH,
       clientId: VITE_OAUTH_CLIENT_ID,
-      clientSecret: VITE_OAUTH_CLIENT_SECRET,
+      // 🛡️ Sentinel: The clientSecret should never be exposed to the client-side code.
+      // It is a secret that should only be known by the server.
       scope: VITE_OAUTH_SCOPE,
       pkce: VITE_OAUTH_PKCE && JSON.parse(VITE_OAUTH_PKCE)
     }
