@@ -58,7 +58,7 @@
                 </VCardText>
                 <VCardActions>
                   <VSpacer />
-                  <VBtn type="submit" :disabled="!form.valid">
+                  <VBtn type="submit" :loading="loading" :disabled="!form.valid || loading">
                     {{ t('$vuetify.oauth.login') }}
                   </VBtn>
                 </VCardActions>
@@ -121,6 +121,7 @@
   const showError = ref(false)
   const f = ref<any>()
   const menu = ref(false)
+  const loading = ref(false)
   const form = ref({
     valid: false,
     model: {
@@ -142,8 +143,13 @@
   const signIn = async () => {
     const { valid, model } = form.value
     if (valid) {
-      await login(model)
-      f.value?.reset()
+      loading.value = true
+      try {
+        await login(model)
+        f.value?.reset()
+      } finally {
+        loading.value = false
+      }
     }
   }
 
