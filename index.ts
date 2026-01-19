@@ -4,8 +4,8 @@ import { readFileSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { Writable } from 'stream'
 
-let key: NonSharedBuffer | undefined
-let cert: NonSharedBuffer | undefined
+let key: Buffer<ArrayBuffer> | undefined
+let cert: Buffer<ArrayBuffer> | undefined
 try {
   key = readFileSync('.cert/key.pem')
   cert = readFileSync('.cert/cert.pem')

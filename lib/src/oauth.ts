@@ -72,7 +72,9 @@ const parseOauthUri = (hash: string) => {
   let m
   // tslint:disable-next-line:no-conditional-assignment
   while ((m = regex.exec(hash)) !== null) {
-    params[decodeURIComponent(m[1])] = decodeURIComponent(m[2])
+    if (m[1] && m[2]) {
+      params[decodeURIComponent(m[1])] = decodeURIComponent(m[2])
+    }
   }
   return (Object.keys(params).length && params) || {}
 }

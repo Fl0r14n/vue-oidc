@@ -52,16 +52,18 @@ export const unauthorizedInterceptor = (error: any) => {
 http.interceptors.request.use(authorizationInterceptor)
 http.interceptors.response.use(res => res, unauthorizedInterceptor)
 
-export const jwt = (token?: string) =>
-  token
+export const jwt = (token?: string) => {
+  const payload = token?.split('.')[1]
+  return payload
     ? JSON.parse(
         decodeURIComponent(
-          Array.from(atob(token.split('.')[1]))
+          Array.from(atob(payload))
             .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
             .join('')
         )
       )
     : {}
+}
 
 export const user = ref<UserInfo | undefined>()
 
