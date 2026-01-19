@@ -151,6 +151,9 @@ const autoconfigOauth = async () => {
       ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
       ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
       ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
+      ...(((config.value as any)?.pkce === undefined &&
+        v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) ||
+        {}),
       ...{ scope: config.value?.scope || 'openid' }
     }
   }
