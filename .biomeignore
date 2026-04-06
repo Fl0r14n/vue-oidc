@@ -1,5 +1,4 @@
 **/dist/**
-node_modules/
 **/node_modules/**
 **/.bun/**
 **/build/**
@@ -7,6 +6,3 @@ node_modules/
 **/dist-ssr/**
 output.css
 *.map
-bun.lock
-.claude
-.idea

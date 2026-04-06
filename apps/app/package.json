@@ -1,0 +1,21 @@
+{
+  "name": "vue-bun-client",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot index.html",
+    "build": "bun build.ts"
+  },
+  "dependencies": {
+    "primevue": "latest",
+    "vue": "latest",
+    "@elysiajs/eden": "latest"
+  },
+  "devDependencies": {
+    "@eckidevs/bun-plugin-vue": "latest",
+    "@types/bun": "latest",
+    "bun-plugin-tailwind": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
+  }
+}

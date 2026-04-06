@@ -1,71 +1,62 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, jest, mock } from 'bun:test'
 import { ref } from 'vue'
 
-// Mock dependencies
-vi.mock('./config', () => ({
+mock.module('./config', () => ({
   config: ref({})
 }))
 
-vi.mock('./token', () => ({
+mock.module('./token', () => ({
   token: ref({})
 }))
 
-vi.mock('./user', () => ({
-  jwt: vi.fn()
-}))
-
-vi.mock('./functions', () => ({
+mock.module('./functions', () => ({
   oauthFunctions: {
-    resourceOwnerLogin: vi.fn(),
-    clientCredentialLogin: vi.fn(),
-    openIdConfiguration: vi.fn(),
-    revoke: vi.fn(),
-    authorize: vi.fn()
+    resourceOwnerLogin: jest.fn(),
+    clientCredentialLogin: jest.fn(),
+    openIdConfiguration: jest.fn(),
+    revoke: jest.fn(),
+    authorize: jest.fn()
   }
 }))
 
-// Mock crypto
-const mockCrypto = {
-  getRandomValues: vi.fn(arr => {
+;(globalThis as any).crypto = {
+  getRandomValues: jest.fn((arr: Uint8Array) => {
     for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256)
     return arr
   }),
   subtle: {
-    digest: vi.fn(async () => new Uint8Array(32).buffer)
+    digest: jest.fn(async () => new Uint8Array(32).buffer)
   }
 }
-vi.stubGlobal('crypto', mockCrypto)
 
-// Mock location
 const mockLocation = {
-  replace: vi.fn(),
+  replace: jest.fn(),
   hash: '',
   search: ''
 }
-vi.stubGlobal('location', mockLocation)
+;(globalThis as any).location = mockLocation
 
 import { config } from './config'
 import { oauthFunctions } from './functions'
 import { OAuthType } from './models'
 import { login, logout, oauthCallback, state } from './oauth'
 import { token } from './token'
-import { jwt } from './user'
 
 describe('oauth', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    jest.clearAllMocks()
     token.value = {}
     config.value = {}
     state.value = undefined
     mockLocation.hash = ''
     mockLocation.search = ''
-    vi.mocked(oauthFunctions.openIdConfiguration).mockResolvedValue(undefined)
+    ;(oauthFunctions.openIdConfiguration as any).mockResolvedValue(undefined)
   })
 
   describe('login', () => {
     it('should perform client credential login if no parameters provided', async () => {
       const mockToken = { access_token: 'cc-token' }
-      vi.mocked(oauthFunctions.clientCredentialLogin).mockResolvedValue(mockToken)
+      ;(oauthFunctions.clientCredentialLogin as any).mockResolvedValue(mockToken)
 
       await login()
 
@@ -76,7 +67,7 @@ describe('oauth', () => {
     it('should perform resource owner login if password is provided', async () => {
       const params = { username: 'user', password: 'pass' }
       const mockToken = { access_token: 'ro-token' }
-      vi.mocked(oauthFunctions.resourceOwnerLogin).mockResolvedValue(mockToken)
+      ;(oauthFunctions.resourceOwnerLogin as any).mockResolvedValue(mockToken)
 
       await login(params)
 
@@ -167,7 +158,7 @@ describe('oauth', () => {
 
     it('should handle authorization code redirect (search)', async () => {
       mockLocation.search = '?code=c123&state=s456'
-      vi.mocked(oauthFunctions.authorize).mockResolvedValue({ access_token: 'new-at' })
+      ;(oauthFunctions.authorize as any).mockResolvedValue({ access_token: 'new-at' })
 
       await oauthCallback()
 
@@ -178,9 +169,10 @@ describe('oauth', () => {
     })
 
     it('should validate nonce if openid scope was used', async () => {
-      mockLocation.hash = '#access_token=at&id_token=header.payload.sig&nonce=n123'
+      // Use a real JWT with encoded nonce payload
+      const jwtPayload = btoa(JSON.stringify({ nonce: 'n123' }))
+      mockLocation.hash = `#access_token=at&id_token=header.${jwtPayload}.sig&nonce=n123`
       token.value = { nonce: 'mismatch' }
-      vi.mocked(jwt).mockReturnValue({ nonce: 'n123' })
 
       await oauthCallback()
 
@@ -198,9 +190,8 @@ describe('oauth', () => {
         code_challenge_methods_supported: ['S256'],
         end_session_endpoint: 'https://auth.com/logout'
       }
-      vi.mocked(oauthFunctions.openIdConfiguration).mockResolvedValue(wellKnown)
+      ;(oauthFunctions.openIdConfiguration as any).mockResolvedValue(wellKnown)
 
-      // login triggers autoconfigOauth
       await login()
 
       expect(config.value).toMatchObject({
