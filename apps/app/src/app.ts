@@ -10,8 +10,6 @@ declare module 'vue' {
   }
 }
 
-const BASE_URL = process.env.BASE_URL || '/'
-
 const _getComponent = (ctx: AppContext, name: string, uid?: string) =>
   (uid && ctx.components[`${name}-${uid}`]) ||
   ctx.components[name] ||
@@ -26,7 +24,7 @@ export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | nu
   }
   app.use(pinia)
   const router = createRouter({
-    history: ssr ? createMemoryHistory(BASE_URL) : createWebHistory(BASE_URL),
+    history: ssr ? createMemoryHistory() : createWebHistory(),
     routes: []
   })
   app.use(router)

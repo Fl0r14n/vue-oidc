@@ -5,10 +5,10 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun --filter \"*\" dev",
+    "dev": "bun --filter \"*\" --elide-lines=0 dev",
     "ssr": "bun --filter \"*\" --elide-lines=0 ssr",
     "ssr:prod": "NODE_ENV=production bun --filter \"*\" --elide-lines=0 ssr",
-    "prod": "NODE_ENV=production bun --filter \"*\" dev",
+    "prod": "NODE_ENV=production bun --filter \"*\" --elide-lines=0 dev",
     "build": "bun --filter \"*\" build",
     "test": "bun --filter \"*\" test",
     "lint": "biome lint .",

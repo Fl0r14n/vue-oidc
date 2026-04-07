@@ -5,8 +5,13 @@ const result = await Bun.build({
   outdir: './dist',
   plugins: [vuePlugin({ optionsApi: true })],
   minify: true,
-  sourcemap: 'linked',
-
+  splitting: true,
+  sourcemap: 'none',
+  define: {
+    'process.env': JSON.stringify(
+      Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined))
+    )
+  }
 })
 
 if (!result.success) {

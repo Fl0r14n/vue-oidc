@@ -10,7 +10,11 @@ const clientBuild = await Bun.build({
   plugins: [vuePlugin],
   target: 'browser',
   splitting: false,
-
+  define: {
+    'process.env': JSON.stringify(
+      Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined))
+    )
+  }
 })
 
 if (!clientBuild.success) {
