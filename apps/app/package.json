@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot index.html",
+    "prod": "bun --hot index.html",
     "build": "bun build.ts"
   },
   "dependencies": {
