@@ -22,13 +22,18 @@
   },
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "src/OAuth.vue"
   ],
   "main": "./dist/index.mjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./component": {
+      "types": "./src/OAuth.vue",
+      "default": "./src/OAuth.vue"
     }
   },
   "scripts": {
@@ -39,7 +44,15 @@
     "axios": "^1"
   },
   "peerDependencies": {
-    "vue": "^3"
+    "@mdi/js": "^7",
+    "sass": ">=1",
+    "vue": "^3",
+    "vuetify": "^3"
+  },
+  "peerDependenciesMeta": {
+    "@mdi/js": { "optional": true },
+    "sass": { "optional": true },
+    "vuetify": { "optional": true }
   },
   "devDependencies": {
     "@types/bun": "latest",
