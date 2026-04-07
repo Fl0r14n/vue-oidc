@@ -6,5 +6,5 @@ export default defineConfig({
   format: 'esm',
   deps: { neverBundle: ['vue', 'axios'] },
   dts: true,
-  clean: true,
+  clean: true
 })

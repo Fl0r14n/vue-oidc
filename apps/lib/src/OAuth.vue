@@ -79,100 +79,100 @@
   </VNoSsr>
 </template>
 <script setup lang="ts">
-  import {
-    VAlert,
-    VAvatar,
-    VBtn,
-    VCard,
-    VCardActions,
-    VCardText,
-    VForm,
-    VImg,
-    VList,
-    VListItem,
-    VMenu,
-    VNoSsr,
-    VSpacer,
-    VTextField
-  } from 'vuetify/components'
-  import { OAuthType } from './models'
-  import { useOAuth, useOAuthUser } from './module'
-  import { ref, watch } from 'vue'
-  import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
-  import { useLocale } from 'vuetify'
+import {
+  VAlert,
+  VAvatar,
+  VBtn,
+  VCard,
+  VCardActions,
+  VCardText,
+  VForm,
+  VImg,
+  VList,
+  VListItem,
+  VMenu,
+  VNoSsr,
+  VSpacer,
+  VTextField
+} from 'vuetify/components'
+import { OAuthType } from './models'
+import { useOAuth, useOAuthUser } from './module'
+import { ref, watch } from 'vue'
+import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
+import { useLocale } from 'vuetify'
 
-  const length = 128
-  const { t } = useLocale()
-  const { login, logout, isAuthorized, hasError, errorDescription } = useOAuth()
-  const user = useOAuthUser()
-  const props = withDefaults(
-    defineProps<{
-      type?: OAuthType | string
-      logoutRedirectUri?: string
-      redirectUri?: string
-      responseType?: string
-      state?: string
-    }>(),
-    {
-      type: 'password'
-    }
-  )
-  const visible = ref(false)
-  const showError = ref(false)
-  const f = ref<any>()
-  const menu = ref(false)
-  const form = ref({
-    valid: false,
-    model: {
-      username: '',
-      password: ''
-    },
-    rules: {
-      username: [
-        (v: string) => !!v || t('$vuetify.oauth.usernameRequired'),
-        (v: string) => (v && v.length <= length) || t('$vuetify.oauth.usernameLength', [length])
-      ],
-      password: [
-        (v: string) => !!v || t('$vuetify.oauth.passwordRequired'),
-        (v: string) => (v && v.length <= length) || t('$vuetify.oauth.passwordLength', [length])
-      ]
-    }
-  })
-
-  const signIn = async () => {
-    const { valid, model } = form.value
-    if (valid) {
-      await login(model)
-      f.value?.reset()
-    }
+const length = 128
+const { t } = useLocale()
+const { login, logout, isAuthorized, hasError, errorDescription } = useOAuth()
+const user = useOAuthUser()
+const props = withDefaults(
+  defineProps<{
+    type?: OAuthType | string
+    logoutRedirectUri?: string
+    redirectUri?: string
+    responseType?: string
+    state?: string
+  }>(),
+  {
+    type: 'password'
   }
-
-  const signOut = async () => {
-    menu.value = false
-    await logout(props.logoutRedirectUri)
+)
+const visible = ref(false)
+const showError = ref(false)
+const f = ref<any>()
+const menu = ref(false)
+const form = ref({
+  valid: false,
+  model: {
+    username: '',
+    password: ''
+  },
+  rules: {
+    username: [
+      (v: string) => !!v || t('$vuetify.oauth.usernameRequired'),
+      (v: string) => (v && v.length <= length) || t('$vuetify.oauth.usernameLength', [length])
+    ],
+    password: [
+      (v: string) => !!v || t('$vuetify.oauth.passwordRequired'),
+      (v: string) => (v && v.length <= length) || t('$vuetify.oauth.passwordLength', [length])
+    ]
   }
+})
 
-  const getRedirectUri = () => {
-    const { origin, pathname, search } = globalThis.location || {}
-    return props.redirectUri || `${origin}${pathname}${search}`
+const signIn = async () => {
+  const { valid, model } = form.value
+  if (valid) {
+    await login(model)
+    f.value?.reset()
   }
+}
 
-  watch(
-    user,
-    () => {
-      if (user.value) {
-        const { given_name, family_name } = user.value
-        if (given_name || family_name) {
-          user.value.initials = `${given_name?.charAt(0) || ''}${family_name?.charAt(0) || ''}`
-        } else {
-          user.value.initials = `?`
-        }
+const signOut = async () => {
+  menu.value = false
+  await logout(props.logoutRedirectUri)
+}
+
+const getRedirectUri = () => {
+  const { origin, pathname, search } = globalThis.location || {}
+  return props.redirectUri || `${origin}${pathname}${search}`
+}
+
+watch(
+  user,
+  () => {
+    if (user.value) {
+      const { given_name, family_name } = user.value
+      if (given_name || family_name) {
+        user.value.initials = `${given_name?.charAt(0) || ''}${family_name?.charAt(0) || ''}`
+      } else {
+        user.value.initials = `?`
       }
-    },
-    { immediate: true }
-  )
+    }
+  },
+  { immediate: true }
+)
 
-  watch(hasError, hasError => hasError && (showError.value = true), { deep: true })
+watch(hasError, hasError => hasError && (showError.value = true), { deep: true })
 </script>
 <style lang="scss">
   .oauth-form {

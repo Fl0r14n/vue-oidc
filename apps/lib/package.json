@@ -50,9 +50,15 @@
     "vuetify": "^3"
   },
   "peerDependenciesMeta": {
-    "@mdi/js": { "optional": true },
-    "sass": { "optional": true },
-    "vuetify": { "optional": true }
+    "@mdi/js": {
+      "optional": true
+    },
+    "sass": {
+      "optional": true
+    },
+    "vuetify": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/bun": "latest",

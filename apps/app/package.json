@@ -7,15 +7,14 @@
     "build": "bun build.ts"
   },
   "dependencies": {
-    "primevue": "latest",
+    "@mdi/js": "latest",
     "vue": "latest",
-    "@elysiajs/eden": "latest"
+    "vue-router": "latest",
+    "pinia": "latest",
+    "vuetify": "latest"
   },
   "devDependencies": {
     "@eckidevs/bun-plugin-vue": "latest",
-    "@types/bun": "latest",
-    "bun-plugin-tailwind": "latest",
-    "tailwindcss": "latest",
-    "typescript": "latest"
+    "@types/bun": "latest"
   }
 }
