@@ -69,9 +69,7 @@ const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
 const parseOauthUri = (hash: string) => {
   const regex = /([^&=]+)=([^&]*)/g
   const params: Record<string, string> = {}
-  let m
-  // tslint:disable-next-line:no-conditional-assignment
-  while ((m = regex.exec(hash)) !== null) {
+  for (const m of hash.matchAll(regex)) {
     if (m[1] && m[2]) {
       params[decodeURIComponent(m[1])] = decodeURIComponent(m[2])
     }
@@ -126,7 +124,7 @@ export const oauthCallback = async (url?: string) => {
     }
     state.value = parameters?.state
   } else if (isAuthCodeRedirect) {
-    const parameters = parseOauthUri((search && search.substring(1)) || (hash && hash.substring(1)))
+    const parameters = parseOauthUri(search?.substring(1) || hash?.substring(1))
     token.value = {
       ...token.value,
       ...parameters

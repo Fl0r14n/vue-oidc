@@ -58,7 +58,7 @@ export const jwt = (token?: string) => {
     ? JSON.parse(
         decodeURIComponent(
           Array.from(atob(payload))
-            .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .map(c => `%${(`00${c.charCodeAt(0).toString(16)}`).slice(-2)}`)
             .join('')
         )
       )

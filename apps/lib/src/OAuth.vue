@@ -95,7 +95,7 @@ import {
   VSpacer,
   VTextField
 } from 'vuetify/components'
-import { OAuthType } from './models'
+import type { OAuthType } from './models'
 import { useOAuth, useOAuthUser } from './module'
 import { ref, watch } from 'vue'
 import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
@@ -172,7 +172,13 @@ watch(
   { immediate: true }
 )
 
-watch(hasError, hasError => hasError && (showError.value = true), { deep: true })
+watch(
+  hasError,
+  hasError => {
+    if (hasError) showError.value = true
+  },
+  { deep: true }
+)
 </script>
 <style lang="scss">
   .oauth-form {

@@ -1,4 +1,4 @@
-import { type App, type Ref } from 'vue'
+import type { App, Ref } from 'vue'
 import type { AxiosInstance } from 'axios'
 
 export type ClientCredentialConfig = {

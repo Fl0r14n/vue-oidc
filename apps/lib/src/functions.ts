@@ -188,7 +188,7 @@ export const oauthFunctions: OAuthFunctions = {
             {
               headers: {
                 ...HEADERS,
-                Authorization: 'Basic ' + btoa(`${clientId}:${clientSecret}`)
+                Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`
               }
             }
           )

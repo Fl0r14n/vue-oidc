@@ -7,7 +7,7 @@ const getURL = (req: any) => {
   }
   let href = 'http://localhost'
   const host =
-    req.headers['x-forwarded-host'] || req.headers['host'] || `${req.hostname}:${req.socket?.localPort || req.socket?.address().port}`
+    req.headers['x-forwarded-host'] || req.headers.host || `${req.hostname}:${req.socket?.localPort || req.socket?.address().port}`
   href = `${req.protocol}://${host}${req.originalUrl}`
   return new URL(href)
 }
