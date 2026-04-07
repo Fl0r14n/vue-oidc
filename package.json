@@ -6,6 +6,7 @@
   ],
   "scripts": {
     "dev": "bun --filter \"*\" dev",
+    "ssr": "bun --filter \"*\" ssr",
     "prod": "NODE_ENV=production bun --filter \"*\" dev",
     "build": "bun --filter \"*\" build",
     "test": "bun --filter \"*\" test",

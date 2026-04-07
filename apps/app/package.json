@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot index.html",
+    "ssr": "bun --preload ./vue-plugin.ts server.ts",
     "build": "bun build.ts"
   },
   "dependencies": {
