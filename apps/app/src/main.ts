@@ -7,7 +7,7 @@ import { de, en } from './i18n'
 import { oauthCallbackGuard } from './guards'
 import { createOAuth } from 'vue-oidc'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
-import { bootstrapApp } from './app.ts'
+import { bootstrapApp } from './app'
 
 const {
   THEME,

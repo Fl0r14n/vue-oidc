@@ -5,7 +5,7 @@ const result = await Bun.build({
   outdir: './dist',
   plugins: [vuePlugin({ optionsApi: true })],
   minify: true,
-  sourcemap: 'linked',
+  sourcemap: 'linked'
 })
 
 if (!result.success) {
