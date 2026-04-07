@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --hot index.html",
-    "ssr": "SSR=true bun --preload ./vue-plugin.ts server.ts",
+    "dev": "bun --preload ./vue-plugin.ts serve.ts",
+    "ssr": "SSR=true bun --preload ./vue-plugin.ts serve-ssr.ts",
     "build": "bun build.ts"
   },
   "dependencies": {

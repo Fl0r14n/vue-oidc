@@ -10,15 +10,15 @@ declare module 'vue' {
   }
 }
 
-const { BASE_URL, SSR } = import.meta.env
+const BASE_URL = process.env.BASE_URL || '/'
 
 const _getComponent = (ctx: AppContext, name: string, uid?: string) =>
   (uid && ctx.components[`${name}-${uid}`]) ||
   ctx.components[name] ||
   console.warn(`CMS component identified by name: ${name} and/or uid: ${uid} was not found`)
 
-export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | null) => {
-  const app = import.meta.env.SSR ? createSSRApp(comp, ctx) : createApp(comp, ctx)
+export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | null, ssr = false) => {
+  const app = ssr ? createSSRApp(comp, ctx) : createApp(comp, ctx)
   const { state } = globalThis as any
   const pinia = createPinia()
   if (state) {
@@ -26,7 +26,7 @@ export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | nu
   }
   app.use(pinia)
   const router = createRouter({
-    history: SSR ? createMemoryHistory(BASE_URL) : createWebHistory(BASE_URL),
+    history: ssr ? createMemoryHistory(BASE_URL) : createWebHistory(BASE_URL),
     routes: []
   })
   app.use(router)

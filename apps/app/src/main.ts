@@ -21,8 +21,8 @@ const {
   OAUTH_PKCE
 } = process.env
 
-export const createApp = () => {
-  const app = bootstrapApp(App)
+export const createApp = (ssr = false) => {
+  const app = bootstrapApp(App, null, ssr)
   const oauth = createOAuth({
     config: {
       issuerPath: OAUTH_ISSUER_PATH,

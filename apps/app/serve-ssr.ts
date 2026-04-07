@@ -1,5 +1,6 @@
 import { render } from './src/entry-server'
 import vuePlugin from './vue-plugin'
+import { tls } from '../../.cert'
 
 const dir = import.meta.dir
 
@@ -9,7 +10,8 @@ const clientBuild = await Bun.build({
   entrypoints: [`${dir}/src/entry-client.ts`],
   plugins: [vuePlugin],
   target: 'browser',
-  splitting: false
+  splitting: false,
+
 })
 
 if (!clientBuild.success) {
@@ -31,6 +33,7 @@ const port = Number(process.env.PORT) || 3001
 
 Bun.serve({
   port,
+  tls,
   async fetch(req) {
     const url = new URL(req.url)
 

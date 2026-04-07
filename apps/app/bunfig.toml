@@ -1,5 +1,0 @@
-[serve]
-port = 3001
-
-[serve.static]
-plugins = ["./vue-plugin.ts"]
