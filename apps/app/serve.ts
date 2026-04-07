@@ -1,37 +1,57 @@
 import vuePlugin from './vue-plugin'
 import { tls } from '../../.cert'
+import { watch } from 'node:fs'
 
 const dir = import.meta.dir
-
 const template = await Bun.file(`${dir}/index.html`).text()
 
-const clientBuild = await Bun.build({
+const buildOptions = {
   entrypoints: [`${dir}/src/entry-client.ts`],
   plugins: [vuePlugin],
   target: 'browser',
   splitting: false,
   define: {
-    'process.env': JSON.stringify(
-      Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined))
-    )
+    'process.env': JSON.stringify(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)))
+  }
+}
+
+const buildAssets = async () => {
+  const result = await Bun.build(buildOptions)
+  if (!result.success) {
+    for (const log of result.logs) console.error(log)
+    return null
+  }
+  const assets = new Map<string, { text: string; type: string }>()
+  for (const output of result.outputs) {
+    assets.set(`/${output.path}`, { text: await output.text(), type: output.type })
+  }
+  const entry = result.outputs.find(o => o.kind === 'entry-point')
+  if (entry) {
+    assets.set('/src/entry-client.ts', { text: await entry.text(), type: entry.type })
+  }
+  return assets
+}
+
+let assets = await buildAssets()
+if (!assets) process.exit(1)
+
+const clients = new Set<ReadableStreamDefaultController>()
+
+watch(`${dir}/src`, { recursive: true }, async () => {
+  const rebuilt = await buildAssets()
+  if (rebuilt) {
+    assets = rebuilt
+    for (const client of clients) {
+      try {
+        client.enqueue('data: reload\n\n')
+      } catch {}
+    }
+    console.log('Rebuilt')
   }
 })
 
-if (!clientBuild.success) {
-  for (const log of clientBuild.logs) console.error(log)
-  process.exit(1)
-}
-
-const assets = new Map<string, { text: string; type: string }>()
-for (const output of clientBuild.outputs) {
-  assets.set(`/${output.path}`, { text: await output.text(), type: output.type })
-}
-
-const entryOutput = clientBuild.outputs.find(o => o.kind === 'entry-point')
-if (entryOutput) {
-  assets.set('/src/entry-client.ts', { text: await entryOutput.text(), type: entryOutput.type })
-}
-
+const hotScript = `<script>new EventSource('/__hot').onmessage=()=>location.reload()</script>`
+const hotTemplate = template.replace('</body>', `${hotScript}</body>`)
 const port = Number(process.env.PORT) || 3001
 
 Bun.serve({
@@ -41,12 +61,28 @@ Bun.serve({
   async fetch(req) {
     const url = new URL(req.url)
 
-    const asset = assets.get(url.pathname)
+    if (url.pathname === '/__hot') {
+      let controller!: ReadableStreamDefaultController
+      const stream = new ReadableStream({
+        start(c) {
+          controller = c
+          clients.add(c)
+        },
+        cancel() {
+          clients.delete(controller)
+        }
+      })
+      return new Response(stream, {
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' }
+      })
+    }
+
+    const asset = assets?.get(url.pathname)
     if (asset) {
       return new Response(asset.text, { headers: { 'Content-Type': asset.type } })
     }
 
-    return new Response(template, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+    return new Response(hotTemplate, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
   }
 })
 

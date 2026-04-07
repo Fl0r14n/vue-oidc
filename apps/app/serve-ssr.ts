@@ -12,9 +12,7 @@ const clientBuild = await Bun.build({
   target: 'browser',
   splitting: false,
   define: {
-    'process.env': JSON.stringify(
-      Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined))
-    )
+    'process.env': JSON.stringify(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)))
   }
 })
 

@@ -8,9 +8,7 @@ const result = await Bun.build({
   splitting: true,
   sourcemap: 'none',
   define: {
-    'process.env': JSON.stringify(
-      Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined))
-    )
+    'process.env': JSON.stringify(Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)))
   }
 })
 
