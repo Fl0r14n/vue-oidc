@@ -1,13 +1,13 @@
-import '@/assets/main.scss'
+import './assets/main.scss'
 
 import { createVuetify } from 'vuetify'
 import { md1 } from 'vuetify/blueprints'
-import App from '@/App.vue'
-import { de, en } from '@/i18n'
-import { oauthCallbackGuard } from '@/guards'
+import App from './App.vue'
+import { de, en } from './i18n'
+import { oauthCallbackGuard } from './guards'
 import { createOAuth } from 'vue-oidc'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
-import { bootstrapApp } from '@/app.ts'
+import { bootstrapApp } from './app.ts'
 
 const {
   THEME,
@@ -46,7 +46,7 @@ export const createApp = () => {
   router.addRoute({
     path: '/',
     name: 'main',
-    component: () => import('@/pages/MainPage.vue')
+    component: () => import('./pages/MainPage.vue')
   })
   router.addRoute({
     path: '/oauth_callback',
