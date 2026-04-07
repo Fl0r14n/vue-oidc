@@ -13,7 +13,8 @@
     "test": "bun --filter \"*\" test",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "check": "biome check --write ."
+    "check": "biome check --write .",
+    "publish": "bun --filter vue-oidc publish"
   },
   "dependencies": {
     "bun-plugin-vue": "latest"

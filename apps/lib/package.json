@@ -39,7 +39,8 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test": "bun test"
+    "test": "bun test",
+    "publish": "bun run build && bun publish"
   },
   "dependencies": {
     "axios": "^1"

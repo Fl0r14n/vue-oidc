@@ -78,6 +78,15 @@ const server = serve({
       res.setHeader = (name: string, value: string | string[]) => {
         res.headers[name.toLowerCase()] = value
       }
+      res.appendHeader = (name: string, value: string) => {
+        const key = name.toLowerCase()
+        const existing = res.headers[key]
+        if (existing === undefined) {
+          res.headers[key] = value
+        } else {
+          res.headers[key] = Array.isArray(existing) ? [...existing, value] : [existing, value]
+        }
+      }
       res.writeHead = (statusCode: number, headers: any) => {
         res.statusCode = statusCode
         if (headers) {
