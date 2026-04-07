@@ -23,7 +23,8 @@
   "type": "module",
   "files": [
     "dist",
-    "src/OAuth.vue"
+    "src/OAuth.vue",
+    "component.d.ts"
   ],
   "main": "./dist/index.mjs",
   "exports": {
@@ -32,7 +33,7 @@
       "import": "./dist/index.mjs"
     },
     "./component": {
-      "types": "./src/OAuth.vue",
+      "types": "./component.d.ts",
       "default": "./src/OAuth.vue"
     }
   },
@@ -45,15 +46,11 @@
   },
   "peerDependencies": {
     "@mdi/js": "^7",
-    "sass": ">=1",
     "vue": "^3",
     "vuetify": "^3"
   },
   "peerDependenciesMeta": {
     "@mdi/js": {
-      "optional": true
-    },
-    "sass": {
       "optional": true
     },
     "vuetify": {

@@ -32,14 +32,14 @@ const mockLocation = (req?: any): Location => {
 }
 
 const setSSRLocation = (req?: any) => {
-  if (req) {
+  if (import.meta.env.SSR && req) {
     globalThis.location = mockLocation(req)
   }
 }
 
 export const render = async (req: any, manifest: any) => {
   setSSRLocation(req)
-  const app = createApp(true)
+  const app = createApp()
   const router = app.getRouter()
   await router.push(`${globalThis.location.pathname}${globalThis.location.search}`)
   await router.isReady()

@@ -1,5 +1,5 @@
-import type { App, Ref } from 'vue'
 import type { AxiosInstance } from 'axios'
+import type { App, Ref } from 'vue'
 
 export type ClientCredentialConfig = {
   tokenPath: string

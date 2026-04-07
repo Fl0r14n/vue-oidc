@@ -12,8 +12,9 @@ Run from repo root. Always use `bun`, never `npm`/`yarn`/`pnpm`.
 
 ```
 bun install            # install all workspace deps
-bun run dev            # start dev servers for all workspaces
-bun run build          # build lib (tsdown) + app (Bun.build)
+bun run dev            # start dev servers for all workspaces (app on port 3000)
+bun run ssr            # start SSR dev server (Vite middleware + Bun.serve)
+bun run build          # build lib (tsdown) + app (vite build)
 bun run test           # run lib tests (only lib has tests)
 bun run lint           # biome lint .
 bun run format         # biome format --write .
@@ -24,7 +25,7 @@ Per-package:
 ```
 bun --filter vue-oidc build     # build lib only
 bun --filter vue-oidc test      # run lib tests
-bun --filter vue-oidc-client dev  # start app dev server (port 3001)
+bun --filter vue-oidc-client dev  # start app dev server (Vite, port 3000)
 ```
 
 ## Library (`apps/lib`)
@@ -32,16 +33,17 @@ bun --filter vue-oidc-client dev  # start app dev server (port 3001)
 - **Build**: `tsdown` → ESM output to `dist/`, generates `.d.mts` types
 - **Tests**: `bun test` using `bun:test`. Only `oauth.spec.ts` and `ref.spec.ts`
 - **Exports**: `vue-oidc` (main) and `vue-oidc/component` (raw `OAuth.vue` source)
-- **Peer deps**: `vue^3` (required), `vuetify^3`, `@mdi/js`, `sass` (all optional)
-- **Runtime dep**: `axios` (never bundled per tsdown config)
+- **Peer deps**: `vue^3` (required), `vuetify^3`, `@mdi/js` (all optional)
+- **Runtime deps**: `axios` (never bundled per tsdown config)
 
 ## App (`apps/app`)
 
-- **Dev**: `bun --hot index.html` — Bun's native hot-reload, no Vite
-- **SSR**: `SSR=true bun --preload ./vue-plugin.ts server.ts` — Bun.serve on port 3001
-- **Build**: `bun build.ts` — uses `Bun.build` API directly, outputs to `dist/`
-- **Vue plugin**: `@eckidevs/bun-plugin-vue` (NOT `bun-plugin-vue`), requires `{ optionsApi: true }`
-- **Stack**: Vue 3, Vue Router, Pinia, Vuetify
+- **Dev**: Vite via `bun --filter vue-oidc-client dev` — port 3000, HMR host `vite.local.dev` with WSS
+- **SSR**: `bun run ssr` — runs `index.ts` which creates Vite in middleware mode + Bun.serve with TLS
+- **Build**: `vite build` via `bun run build`
+- **Stack**: Vue 3, Vue Router, Pinia, Vuetify, Vite
+- **TLS**: `.cert/key.pem` + `.cert/cert.pem` (optional, dev server uses HTTPS if present)
+- **Alias**: `@` maps to `./src`
 
 ## Biome config
 
@@ -53,13 +55,14 @@ bun --filter vue-oidc-client dev  # start app dev server (port 3001)
 
 ## Env vars
 
-Root `.env` / `.env.production` drive OAuth config:
-- `OAUTH_ISSUER_PATH`, `OAUTH_CLIENT_ID`, `OAUTH_SCOPE`, `OAUTH_TYPE`, `OAUTH_STATE`, `APP_DOMAIN`
-- App also uses `API_BASE`, `API_PATH`, `API_INSTANCE` (production)
-- `THEME=light` default
+App env vars use `VITE_` prefix (Vite convention):
+- `VITE_OAUTH_ISSUER_PATH`, `VITE_OAUTH_CLIENT_ID`, `VITE_OAUTH_SCOPE`, `VITE_OAUTH_TYPE`
+- `VITE_API_BASE`, `VITE_API_PATH`, `VITE_API_INSTANCE` (production)
+- `VITE_THEME=light` default
+- `PORT` overrides default 3000
 
 ## Test quirks
 
 - Tests mock modules via `mock.module()` from `bun:test`
 - `crypto` and `location` globals are manually mocked in `oauth.spec.ts`
-- Only the library has tests; the app has none
+- Only the library has tests; the app has vitest configured but no test files

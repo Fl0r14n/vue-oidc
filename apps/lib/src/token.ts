@@ -1,9 +1,9 @@
-import type { OAuthToken, OpenIdConfig } from './models'
-import { OAuthStatus } from './models'
 import { computed, watch } from 'vue'
 import { config, storageKey } from './config'
-import { storageRef } from './ref'
 import { oauthFunctions } from './functions'
+import type { OAuthToken, OpenIdConfig } from './models'
+import { OAuthStatus } from './models'
+import { storageRef } from './ref'
 
 export const token = storageRef<OAuthToken>(storageKey, {})
 

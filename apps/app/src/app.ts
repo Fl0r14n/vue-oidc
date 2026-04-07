@@ -1,6 +1,6 @@
+import { createPinia, getActivePinia } from 'pinia'
 import { type AppContext, type Component, createApp, createSSRApp, getCurrentInstance } from 'vue'
 import { createMemoryHistory, createRouter, createWebHistory, type Router, routerKey } from 'vue-router'
-import { createPinia, getActivePinia } from 'pinia'
 
 declare module 'vue' {
   interface App {
@@ -10,13 +10,15 @@ declare module 'vue' {
   }
 }
 
+const { BASE_URL, SSR } = import.meta.env
+
 const _getComponent = (ctx: AppContext, name: string, uid?: string) =>
   (uid && ctx.components[`${name}-${uid}`]) ||
   ctx.components[name] ||
   console.warn(`CMS component identified by name: ${name} and/or uid: ${uid} was not found`)
 
-export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | null, ssr = false) => {
-  const app = ssr ? createSSRApp(comp, ctx) : createApp(comp, ctx)
+export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | null) => {
+  const app = import.meta.env.SSR ? createSSRApp(comp, ctx) : createApp(comp, ctx)
   const { state } = globalThis as any
   const pinia = createPinia()
   if (state) {
@@ -24,7 +26,7 @@ export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | nu
   }
   app.use(pinia)
   const router = createRouter({
-    history: ssr ? createMemoryHistory() : createWebHistory(),
+    history: SSR ? createMemoryHistory(BASE_URL) : createWebHistory(BASE_URL),
     routes: []
   })
   app.use(router)

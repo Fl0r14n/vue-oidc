@@ -1,9 +1,9 @@
-import { config, ignoredPaths } from './config'
-import type { OpenIdConfig, UserInfo } from './models'
-import { accessToken, isAuthorized, isExpiredToken, token } from './token'
 import axios, { type InternalAxiosRequestConfig, type RawAxiosRequestHeaders } from 'axios'
 import { ref, watch } from 'vue'
+import { config, ignoredPaths } from './config'
 import { oauthFunctions } from './functions'
+import type { OpenIdConfig, UserInfo } from './models'
+import { accessToken, isAuthorized, isExpiredToken, token } from './token'
 
 const HEADER_JSON: RawAxiosRequestHeaders = {
   'Content-Type': 'application/json'

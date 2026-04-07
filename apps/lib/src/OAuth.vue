@@ -67,7 +67,7 @@
             <template v-else>
               <VCardActions>
                 <VSpacer />
-                <VBtn @click="login({ responseType: responseType || type, redirectUri: getRedirectUri(), state })">
+                <VBtn @click="login({ responseType: responseTypeValue, redirectUri: getRedirectUri(), state })">
                   {{ t('$vuetify.oauth.login') }}
                 </VBtn>
               </VCardActions>
@@ -79,6 +79,9 @@
   </VNoSsr>
 </template>
 <script setup lang="ts">
+import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
+import { computed, ref, watch } from 'vue'
+import { useLocale } from 'vuetify'
 import {
   VAlert,
   VAvatar,
@@ -95,11 +98,8 @@ import {
   VSpacer,
   VTextField
 } from 'vuetify/components'
-import type { OAuthType } from './models'
+import { OAuthType } from './models'
 import { useOAuth, useOAuthUser } from './module'
-import { ref, watch } from 'vue'
-import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
-import { useLocale } from 'vuetify'
 
 const length = 128
 const { t } = useLocale()
@@ -157,6 +157,8 @@ const getRedirectUri = () => {
   return props.redirectUri || `${origin}${pathname}${search}`
 }
 
+const responseTypeValue = computed((): string => props.responseType || props.type || OAuthType.AUTHORIZATION_CODE)
+
 watch(
   user,
   () => {
@@ -180,7 +182,7 @@ watch(
   { deep: true }
 )
 </script>
-<style lang="scss">
+<style lang="css" scoped>
   .oauth-form {
     min-width: 300px;
   }
