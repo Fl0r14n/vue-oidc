@@ -10,29 +10,29 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import { bootstrapApp } from '@/app.ts'
 
 const {
-  VITE_THEME,
-  VITE_OAUTH_ISSUER_PATH,
-  VITE_OAUTH_AUTHORIZE_PATH,
-  VITE_OAUTH_TOKEN_PATH,
-  VITE_OAUTH_LOGOUT_PATH,
-  VITE_OAUTH_CLIENT_ID,
-  VITE_OAUTH_CLIENT_SECRET,
-  VITE_OAUTH_SCOPE,
-  VITE_OAUTH_PKCE
-} = import.meta.env
+  THEME,
+  OAUTH_ISSUER_PATH,
+  OAUTH_AUTHORIZE_PATH,
+  OAUTH_TOKEN_PATH,
+  OAUTH_LOGOUT_PATH,
+  OAUTH_CLIENT_ID,
+  OAUTH_CLIENT_SECRET,
+  OAUTH_SCOPE,
+  OAUTH_PKCE
+} = process.env
 
 export const createApp = () => {
   const app = bootstrapApp(App)
   const oauth = createOAuth({
     config: {
-      issuerPath: VITE_OAUTH_ISSUER_PATH,
-      authorizePath: VITE_OAUTH_AUTHORIZE_PATH,
-      tokenPath: VITE_OAUTH_TOKEN_PATH,
-      logoutPath: VITE_OAUTH_LOGOUT_PATH,
-      clientId: VITE_OAUTH_CLIENT_ID,
-      clientSecret: VITE_OAUTH_CLIENT_SECRET,
-      scope: VITE_OAUTH_SCOPE,
-      pkce: VITE_OAUTH_PKCE && JSON.parse(VITE_OAUTH_PKCE)
+      issuerPath: OAUTH_ISSUER_PATH,
+      authorizePath: OAUTH_AUTHORIZE_PATH,
+      tokenPath: OAUTH_TOKEN_PATH,
+      logoutPath: OAUTH_LOGOUT_PATH,
+      clientId: OAUTH_CLIENT_ID,
+      clientSecret: OAUTH_CLIENT_SECRET,
+      scope: OAUTH_SCOPE,
+      pkce: OAUTH_PKCE && JSON.parse(OAUTH_PKCE)
     }
   })
   console.log(oauth.config.value)
@@ -99,7 +99,7 @@ export const createApp = () => {
         }
       },
       theme: {
-        defaultTheme: VITE_THEME || 'light'
+        defaultTheme: THEME || 'light'
       }
     })
   )
