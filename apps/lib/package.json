@@ -24,15 +24,15 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/vue-oidc.js",
+  "main": "./dist/index.mjs",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/vue-oidc.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
   "scripts": {
-    "build": "bun run build.ts",
+    "build": "tsdown",
     "test": "bun test"
   },
   "dependencies": {
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "tsdown": "latest",
     "vue": "^3"
   }
 }
