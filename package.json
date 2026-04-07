@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "dev": "bun --filter \"*\" dev",
-    "prod": "NODE_ENV=production bun --filter \"*\" prod",
+    "prod": "NODE_ENV=production bun --filter \"*\" dev",
     "build": "bun --filter \"*\" build",
     "test": "bun --filter \"*\" test",
     "lint": "biome lint .",
