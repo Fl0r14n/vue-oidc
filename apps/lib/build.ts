@@ -5,7 +5,6 @@ const result = await Bun.build({
   format: 'esm',
   external: ['vue', 'axios'],
   target: 'browser',
-  minify: true
 })
 
 if (!result.success) {

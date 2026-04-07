@@ -13,12 +13,11 @@
     "check": "biome check --write ."
   },
   "dependencies": {
-    "bun-plugin-vue": "^1.0.0"
+    "bun-plugin-vue": "latest"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.10",
+    "@biomejs/biome": "latest",
     "@types/bun": "latest",
-    "typescript": "^6",
-    "vue": "^3"
+    "vue": "latest"
   }
 }
