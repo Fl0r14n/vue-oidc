@@ -8,8 +8,8 @@ import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 let key: Buffer | undefined, cert: Buffer | undefined
 
 try {
-  key = readFileSync('.cert/key.pem')
-  cert = readFileSync('.cert/cert.pem')
+  key = readFileSync('../../.cert/key.pem')
+  cert = readFileSync('../../.cert/cert.pem')
 } catch {
   /* empty */
 }

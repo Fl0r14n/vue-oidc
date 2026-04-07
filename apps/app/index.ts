@@ -8,8 +8,8 @@ import { fileURLToPath, serve } from 'bun'
 let key: Buffer<ArrayBuffer> | undefined
 let cert: Buffer<ArrayBuffer> | undefined
 try {
-  key = readFileSync('.cert/key.pem')
-  cert = readFileSync('.cert/cert.pem')
+  key = readFileSync('../../.cert/key.pem')
+  cert = readFileSync('../../.cert/cert.pem')
 } catch {
   /* empty */
 }
