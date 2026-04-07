@@ -1,6 +1,6 @@
 ## Vue OAuth
 
-> `vue-oidc` is a fully **OAuth 2.1** compliant angular library. The library supports all the 4 flows:
+> `vue-oidc` is a fully **OAuth 2.1** compliant vue library. The library supports all the 4 flows:
 > * **resource**
 > * **implicit**
 > * **authorization code**
@@ -77,6 +77,10 @@ const oauthCallback = inject('oauth-callback') // if you want to call this from 
 
 OAuth component is provided to quickly bootstrap oauth functionality
 
+```typescript
+import OAuth from 'vue-oidc/component'
+```
+
 ```vue
 
 <OAuth type="code" :redirect-uri="redirectUri" :logout-redirect-uri="logoutRedirectUri" />
@@ -94,8 +98,6 @@ for oauth resource flow should be the following
 To use the component correctly, make sure of the following:
 
 ```typescript
-import 'vue-oidc/dist/vue-oidc.css'
-
 import { createVuetify } from 'vuetify'
 import { createI18n, useI18n } from 'vue-i18n'
 import { createVueI18nAdapter } from 'vuetify/locale/adapters/vue-i18n'
