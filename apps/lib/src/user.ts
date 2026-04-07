@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig, type RawAxiosRequestHeaders } from 'axios'
+import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { ref, watch } from 'vue'
 import { config, ignoredPaths } from './config'
 import { oauthFunctions } from './functions'
@@ -52,8 +53,8 @@ export const unauthorizedInterceptor = (error: any) => {
 http.interceptors.request.use(authorizationInterceptor)
 http.interceptors.response.use(res => res, unauthorizedInterceptor)
 
-export const jwt = (token?: string) => {
-  const payload = token?.split('.')[1]
+export const jwt = (idToken?: string) => {
+  const payload = idToken?.split('.')[1]
   return payload
     ? JSON.parse(
         decodeURIComponent(
@@ -65,13 +66,38 @@ export const jwt = (token?: string) => {
     : {}
 }
 
+let jwksSet: ReturnType<typeof createRemoteJWKSet> | undefined
+
+watch(
+  () => (config.value as OpenIdConfig)?.jwksUri,
+  jwksUri => {
+    jwksSet = jwksUri ? createRemoteJWKSet(new URL(jwksUri)) : undefined
+  },
+  { immediate: true }
+)
+
+export const verifyJwt = async (idToken?: string) => {
+  if (!idToken) return {}
+  if (!jwksSet) return jwt(idToken)
+  const { issuerPath, clientId } = (config.value as OpenIdConfig) || {}
+  try {
+    const { payload } = await jwtVerify(idToken, jwksSet, {
+      ...(issuerPath && { issuer: issuerPath }),
+      ...(clientId && { audience: clientId })
+    })
+    return payload as Record<string, any>
+  } catch {
+    return { error: 'Invalid token' }
+  }
+}
+
 export const user = ref<UserInfo | undefined>()
 
 watch(
   () => token.value?.id_token,
-  idToken => {
+  async idToken => {
     if (idToken) {
-      user.value = jwt(idToken)
+      user.value = await verifyJwt(idToken)
     }
   },
   { immediate: true }

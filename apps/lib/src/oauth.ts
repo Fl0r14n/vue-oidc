@@ -11,7 +11,7 @@ import type {
 } from './models'
 import { OAuthType } from './models'
 import { token } from './token'
-import { jwt } from './user'
+import { verifyJwt } from './user'
 
 const arrToString = (buf: Uint8Array) => buf.reduce((s, b) => s + String.fromCharCode(b), '')
 const base64url = (str: string) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
@@ -28,18 +28,17 @@ const pkce = async (value: string) => {
 
 const generateNonce = (scope: string) => {
   if (scope.indexOf('openid') > -1) {
-    const nonce = randomString(10)
+    const nonce = randomString()
     token.value = { ...token.value, nonce }
     return `&nonce=${nonce}`
   }
   return ''
 }
 
-const checkNonce = (parameters: Record<string, string>) => {
-  if (jwt(parameters.id_token)?.nonce !== token.value?.nonce) {
-    return {
-      error: 'Invalid nonce'
-    }
+const checkNonce = async (parameters: Record<string, string>) => {
+  const payload = await verifyJwt(parameters.id_token)
+  if (payload?.error || payload?.nonce !== token.value?.nonce) {
+    return { error: (payload?.error as string) || 'Invalid nonce' }
   }
   return parameters
 }
@@ -149,6 +148,7 @@ const autoconfigOauth = async () => {
       ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
       ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
       ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
+      ...((v?.jwks_uri && { jwksUri: v.jwks_uri }) || {}),
       ...(((config.value as any)?.pkce === undefined &&
         v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) ||
         {}),

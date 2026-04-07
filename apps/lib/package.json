@@ -43,7 +43,8 @@
     "publish": "bun run build && bun publish"
   },
   "dependencies": {
-    "axios": "^1"
+    "axios": "^1",
+    "jose": "^6.2.2"
   },
   "peerDependencies": {
     "@mdi/js": "^7",

@@ -37,6 +37,7 @@ export type AuthorizationCodePKCEConfig = AuthorizationCodeConfig & {
 
 export type OpenIdConfig = AuthorizationCodePKCEConfig & {
   issuerPath: string
+  jwksUri?: string
 }
 
 export type ResourceOwnerParameters = {
@@ -108,6 +109,7 @@ export type OpenIdConfiguration = {
   userinfo_endpoint?: string
   end_session_endpoint?: string
   revocation_endpoint?: string
+  jwks_uri?: string
   scopes_supported?: string[]
   code_challenge_methods_supported?: string[]
 }
