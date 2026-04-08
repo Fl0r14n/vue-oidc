@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { config } from './config'
 import { oauthFunctions } from './functions'
+import { jwt, verifyJwt } from './jwt'
 import { token } from './token'
 import type {
   AuthorizationCodeParameters,
@@ -11,7 +12,6 @@ import type {
   ResourceOwnerParameters
 } from './types'
 import { OAuthType } from './types'
-import { verifyJwt } from './user'
 
 const arrToString = (buf: Uint8Array) => buf.reduce((s, b) => s + String.fromCharCode(b), '')
 const base64url = (str: string) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
@@ -118,7 +118,7 @@ export const oauthCallback = async (url?: string) => {
   if (isImplicitRedirect) {
     const parameters = parseOauthUri(hash.substring(1))
     token.value = {
-      ...checkNonce(parameters),
+      ...(await checkNonce(parameters)),
       type: OAuthType.IMPLICIT
     }
     state.value = parameters?.state
@@ -160,6 +160,6 @@ const autoconfigOauth = async () => {
 const checkCode = async () => {
   const parameters = await oauthFunctions.authorize(token.value, config.value as OpenIdConfig)
   if (parameters) {
-    token.value = checkNonce(parameters)
+    token.value = await checkNonce(parameters)
   }
 }

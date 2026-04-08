@@ -33,7 +33,7 @@
           <template v-else>
             <template v-if="type === OAuthType.RESOURCE">
               <VForm ref="f" v-model="form.valid" lazy-validation autocomplete="on" @submit.prevent="signIn()" @keyup.enter="signIn()">
-                <VCardText class="pb-0 oauth-form">
+                <VCardText class="pb-0 oauth-form" style="min-width: 300px">
                   <VTextField
                     name="username"
                     required
@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
 import { computed, ref, watch } from 'vue'
+import { OAuthType, useOAuth, useOAuthUser } from 'vue-oidc'
 import { useLocale } from 'vuetify'
 import {
   VAlert,
@@ -98,7 +99,6 @@ import {
   VSpacer,
   VTextField
 } from 'vuetify/components'
-import { OAuthType, useOAuth, useOAuthUser } from 'vue-oidc'
 
 const length = 128
 const { t } = useLocale()
@@ -181,8 +181,3 @@ watch(
   { deep: true }
 )
 </script>
-<style lang="css" scoped>
-  .oauth-form {
-    min-width: 300px;
-  }
-</style>
