@@ -1,0 +1,36 @@
+{
+  "name": "vue-oidc-client",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "prod": "vite --mode production",
+    "ssr:dev": "bun run index",
+    "ssr:prod": "NODE_ENV=production bun run index",
+    "preview": "vite preview",
+    "test:unit": "vitest",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build",
+    "build": "run-p type-check \"build-only {@}\" --"
+  },
+  "dependencies": {
+    "vue-oidc": "workspace:*",
+    "@mdi/js": "latest",
+    "vue": "latest",
+    "vue-router": "latest",
+    "pinia": "latest",
+    "vuetify": "latest"
+  },
+  "devDependencies": {
+    "vite": "latest",
+    "vitest": "latest",
+    "typescript": "latest",
+    "vite-plugin-vue-devtools": "latest",
+    "vite-plugin-vuetify": "latest",
+    "@vitejs/plugin-vue": "latest",
+    "sass-embedded": "latest",
+    "@vue/tsconfig": "latest",
+    "npm-run-all2": "latest",
+    "vue-tsc": "latest"
+  }
+}
