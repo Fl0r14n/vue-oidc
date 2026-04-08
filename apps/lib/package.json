@@ -22,9 +22,7 @@
   },
   "type": "module",
   "files": [
-    "dist",
-    "src/OAuth.vue",
-    "component.d.ts"
+    "dist"
   ],
   "main": "./dist/index.mjs",
   "exports": {
@@ -33,8 +31,8 @@
       "import": "./dist/index.mjs"
     },
     "./component": {
-      "types": "./component.d.ts",
-      "default": "./src/OAuth.vue"
+      "types": "./dist/component.d.mts",
+      "import": "./dist/component.mjs"
     }
   },
   "scripts": {
@@ -60,8 +58,11 @@
     }
   },
   "devDependencies": {
+    "@tsdown/css": "^0.21.7",
     "@types/bun": "latest",
     "tsdown": "latest",
-    "vue": "^3"
+    "unplugin-vue": "^7.1.1",
+    "vue": "^3",
+    "vue-tsc": "^3.2.6"
   }
 }

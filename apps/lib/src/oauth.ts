@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { config } from './config'
 import { oauthFunctions } from './functions'
+import { token } from './token'
 import type {
   AuthorizationCodeParameters,
   ClientCredentialConfig,
@@ -8,9 +9,8 @@ import type {
   OpenIdConfig,
   ResourceOwnerConfig,
   ResourceOwnerParameters
-} from './models'
-import { OAuthType } from './models'
-import { token } from './token'
+} from './types'
+import { OAuthType } from './types'
 import { verifyJwt } from './user'
 
 const arrToString = (buf: Uint8Array) => buf.reduce((s, b) => s + String.fromCharCode(b), '')

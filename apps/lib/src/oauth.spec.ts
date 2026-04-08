@@ -38,7 +38,7 @@ const mockLocation = {
 
 import { config } from './config'
 import { oauthFunctions } from './functions'
-import { OAuthType } from './models'
+import { OAuthType } from './types'
 import { login, logout, oauthCallback, state } from './oauth'
 import { token } from './token'
 

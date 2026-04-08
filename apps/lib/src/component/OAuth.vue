@@ -98,8 +98,7 @@ import {
   VSpacer,
   VTextField
 } from 'vuetify/components'
-import { OAuthType } from './models'
-import { useOAuth, useOAuthUser } from './module'
+import { OAuthType, useOAuth, useOAuthUser } from 'vue-oidc'
 
 const length = 128
 const { t } = useLocale()

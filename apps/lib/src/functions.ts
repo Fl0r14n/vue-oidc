@@ -1,5 +1,5 @@
 import axios, { type RawAxiosRequestHeaders } from 'axios'
-import { type OAuthFunctions, OAuthType } from './models'
+import { type OAuthFunctions, OAuthType } from './types'
 
 const HEADERS: RawAxiosRequestHeaders = {
   'Content-Type': 'application/x-www-form-urlencoded',

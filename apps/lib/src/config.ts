@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import type { OAuthConfig, OAuthTypeConfig } from './models'
+import type { OAuthConfig, OAuthTypeConfig } from './types'
 
 export const oauthConfig = ref<OAuthConfig>({
   storageKey: 'token',

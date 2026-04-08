@@ -3,8 +3,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { ref, watch } from 'vue'
 import { config, ignoredPaths } from './config'
 import { oauthFunctions } from './functions'
-import type { OpenIdConfig, UserInfo } from './models'
 import { accessToken, isAuthorized, isExpiredToken, token } from './token'
+import type { OpenIdConfig, UserInfo } from './types'
 
 const HEADER_JSON: RawAxiosRequestHeaders = {
   'Content-Type': 'application/json'
