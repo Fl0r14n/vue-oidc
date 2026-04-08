@@ -64,6 +64,7 @@ export type OAuthConfig = {
   config?: Partial<OAuthTypeConfig>
   storageKey?: string
   ignorePaths?: RegExp[]
+  strictJwt?: boolean
 
   [x: string]: any
 }

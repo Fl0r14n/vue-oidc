@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { watch } from 'vue'
-import { config } from './config'
+import { config, strictJwt } from './config'
 import type { OpenIdConfig } from './types'
 
 export const jwt = (idToken?: string) => {
@@ -19,9 +19,9 @@ export const jwt = (idToken?: string) => {
 let jwksSet: ReturnType<typeof createRemoteJWKSet> | undefined
 
 watch(
-  () => (config.value as OpenIdConfig)?.jwksUri,
-  jwksUri => {
-    jwksSet = jwksUri ? createRemoteJWKSet(new URL(jwksUri)) : undefined
+  [() => (config.value as OpenIdConfig)?.jwksUri, strictJwt],
+  ([jwksUri, strict]) => {
+    jwksSet = jwksUri && strict ? createRemoteJWKSet(new URL(jwksUri)) : undefined
   },
   { immediate: true }
 )

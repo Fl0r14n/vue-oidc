@@ -38,9 +38,9 @@ const mockLocation = {
 
 import { config } from './config'
 import { oauthFunctions } from './functions'
-import { OAuthType } from './types'
 import { login, logout, oauthCallback, state } from './oauth'
 import { token } from './token'
+import { OAuthType } from './types'
 
 describe('oauth', () => {
   beforeEach(() => {
@@ -177,6 +177,18 @@ describe('oauth', () => {
       await oauthCallback()
 
       expect(token.value.error).toBe('Invalid nonce')
+    })
+
+    it('should accept id_token without signature verification when strictJwt is false', async () => {
+      const jwtPayload = btoa(JSON.stringify({ nonce: 'n123' }))
+      mockLocation.hash = `#access_token=at&id_token=header.${jwtPayload}.sig`
+      token.value = { nonce: 'n123' }
+
+      await oauthCallback()
+
+      expect(token.value.error).toBeUndefined()
+      expect(token.value.access_token).toBe('at')
+      expect(token.value.type).toBe(OAuthType.IMPLICIT)
     })
   })
 

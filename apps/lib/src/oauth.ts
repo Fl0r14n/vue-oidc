@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { config } from './config'
 import { oauthFunctions } from './functions'
-import { jwt, verifyJwt } from './jwt'
+import { verifyJwt } from './jwt'
 import { token } from './token'
 import type {
   AuthorizationCodeParameters,

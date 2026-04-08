@@ -3,7 +3,8 @@ import type { OAuthConfig, OAuthTypeConfig } from './types'
 
 export const oauthConfig = ref<OAuthConfig>({
   storageKey: 'token',
-  ignorePaths: []
+  ignorePaths: [],
+  strictJwt: true
 })
 
 export const config = computed({
@@ -21,3 +22,5 @@ export const storageKey = computed({
   get: () => oauthConfig.value.storageKey || 'token',
   set: storageKey => (oauthConfig.value.storageKey = storageKey)
 })
+
+export const strictJwt = computed(() => oauthConfig.value.strictJwt)
