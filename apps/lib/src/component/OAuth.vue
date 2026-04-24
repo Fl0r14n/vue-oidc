@@ -1,12 +1,25 @@
 <template>
   <VNoSsr>
-    <VMenu v-model="menu" rounded :close-on-content-click="false" location="bottom">
+    <VMenu
+      v-model="menu"
+      rounded
+      :close-on-content-click="false"
+      location="bottom"
+    >
       <template v-slot:activator="{ props }">
-        <VBtn v-bind="props" :icon="isAuthorized ? mdiAccount : mdiAccountOutline" />
+        <VBtn
+          v-bind="props"
+          :icon="isAuthorized ? mdiAccount : mdiAccountOutline"
+        />
       </template>
       <VCard>
         <template v-if="isAuthorized">
-          <slot name="userInfo" :user="user" :logout="signOut" v-if="$slots.userInfo" />
+          <slot
+            name="userInfo"
+            :user="user"
+            :logout="signOut"
+            v-if="$slots.userInfo"
+          />
           <template v-else>
             <VList v-if="user?.name || user?.email">
               <VListItem :title="user.name" :subtitle="user.email">
@@ -21,18 +34,30 @@
           </template>
           <VCardActions>
             <VSpacer />
-            <VBtn @click="signOut()">{{ t('$vuetify.oauth.logout') }}</VBtn>
+            <VBtn @click="signOut()">{{ t("$vuetify.oauth.logout") }}</VBtn>
           </VCardActions>
         </template>
         <template v-else>
           <template v-if="showError">
             <VCardText>
-              <VAlert type="error" closable :text="errorDescription" @click:close="showError = false" />
+              <VAlert
+                type="error"
+                closable
+                :text="errorDescription"
+                @click:close="showError = false"
+              />
             </VCardText>
           </template>
           <template v-else>
             <template v-if="type === OAuthType.RESOURCE">
-              <VForm ref="f" v-model="form.valid" lazy-validation autocomplete="on" @submit.prevent="signIn()" @keyup.enter="signIn()">
+              <VForm
+                ref="formRef"
+                v-model="form.valid"
+                lazy-validation
+                autocomplete="on"
+                @submit.prevent="signIn()"
+                @keyup.enter="signIn()"
+              >
                 <VCardText class="pb-0 oauth-form" style="min-width: 300px">
                   <VTextField
                     name="username"
@@ -42,7 +67,8 @@
                     :label="t('$vuetify.oauth.username')"
                     :counter="length"
                     v-model="form.model.username"
-                    :rules="form.rules.username" />
+                    :rules="form.rules.username"
+                  />
                   <VTextField
                     name="password"
                     required
@@ -54,12 +80,13 @@
                     :counter="length"
                     v-model="form.model.password"
                     :rules="form.rules.password"
-                    @click:append-inner="visible = !visible" />
+                    @click:append-inner="visible = !visible"
+                  />
                 </VCardText>
                 <VCardActions>
                   <VSpacer />
                   <VBtn type="submit" :disabled="!form.valid">
-                    {{ t('$vuetify.oauth.login') }}
+                    {{ t("$vuetify.oauth.login") }}
                   </VBtn>
                 </VCardActions>
               </VForm>
@@ -67,8 +94,16 @@
             <template v-else>
               <VCardActions>
                 <VSpacer />
-                <VBtn @click="login({ responseType: responseTypeValue, redirectUri: getRedirectUri(), state })">
-                  {{ t('$vuetify.oauth.login') }}
+                <VBtn
+                  @click="
+                    login({
+                      responseType: responseTypeValue,
+                      redirectUri: getRedirectUri(),
+                      state,
+                    })
+                  "
+                >
+                  {{ t("$vuetify.oauth.login") }}
                 </VBtn>
               </VCardActions>
             </template>
@@ -80,7 +115,7 @@
 </template>
 <script setup lang="ts">
 import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
-import { computed, ref, watch } from 'vue'
+import { computed, shallowRef, useTemplateRef, watch } from 'vue'
 import { OAuthType, useOAuth, useOAuthUser } from 'vue-oidc'
 import { useLocale } from 'vuetify'
 import {
@@ -116,11 +151,11 @@ const props = withDefaults(
     type: 'password'
   }
 )
-const visible = ref(false)
-const showError = ref(false)
-const f = ref<any>()
-const menu = ref(false)
-const form = ref({
+const visible = shallowRef(false)
+const showError = shallowRef(false)
+const formRef = useTemplateRef('formRef')
+const menu = shallowRef(false)
+const form = shallowRef({
   valid: false,
   model: {
     username: '',
@@ -142,7 +177,7 @@ const signIn = async () => {
   const { valid, model } = form.value
   if (valid) {
     await login(model)
-    f.value?.reset()
+    formRef.value?.reset()
   }
 }
 

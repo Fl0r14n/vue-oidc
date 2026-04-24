@@ -75,11 +75,11 @@ export const state = ref<string>()
 
 export const login = async (parameters?: OAuthParameters) => {
   await autoconfigOauth()
-  if (!!parameters && (parameters as ResourceOwnerParameters).password) {
+  if (parameters && (parameters as ResourceOwnerParameters).password) {
     token.value =
       (await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters, config.value as ResourceOwnerConfig)) || {}
   } else if (
-    !!parameters &&
+    parameters &&
     (parameters as AuthorizationCodeParameters).redirectUri &&
     (parameters as AuthorizationCodeParameters).responseType
   ) {
@@ -105,7 +105,7 @@ export const logout = async (logoutRedirectUri?: string, state?: string) => {
   }
 }
 
-export const oauthCallback = async (url?: string) => {
+export const oauthCallback = async (url?: string | URL) => {
   const path = (url && new URL(url)) || globalThis.location || {}
   const { hash, search } = path
   const isImplicitRedirect = hash && /(access_token=)|(error=)/.test(hash)
@@ -134,6 +134,7 @@ const autoconfigOauth = async () => {
   const v = await oauthFunctions.openIdConfiguration(config.value as OpenIdConfig)
   if (v) {
     config.value = {
+      ...config.value,
       ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
       ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
       ...((v?.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
