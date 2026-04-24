@@ -36,6 +36,7 @@ const generateNonce = (scope: string) => {
 }
 
 const checkNonce = async (parameters: Record<string, string>) => {
+  if (parameters.error) return parameters
   const payload = await verifyJwt(parameters.id_token)
   if (payload?.error || payload?.nonce !== token.value?.nonce) {
     return { error: (payload?.error as string) || 'Invalid nonce' }
@@ -53,26 +54,20 @@ const generateCodeChallenge = async (doPkce: any) => {
 }
 
 const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
-  const { authorizePath, clientId, scope, pkce } = config.value as any
+  const { authorizePath, clientId, scope = '', pkce } = config.value as any
   let authorizationUrl = `${authorizePath}`
   authorizationUrl += (authorizePath.includes('?') && '&') || '?'
   authorizationUrl += `client_id=${clientId}`
   token.value = { ...token.value, redirect_uri: parameters.redirectUri }
   authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
   authorizationUrl += `&response_type=${parameters.responseType}`
-  authorizationUrl += `&scope=${encodeURIComponent(scope || '')}`
+  authorizationUrl += `&scope=${encodeURIComponent(scope)}`
   authorizationUrl += `&state=${encodeURIComponent(parameters.state || '')}`
   return globalThis.location?.replace(`${authorizationUrl}${generateNonce(scope)}${await generateCodeChallenge(pkce)}`)
 }
 
 const parseOauthUri = (hash: string) => {
-  const regex = /([^&=]+)=([^&]*)/g
-  const params: Record<string, string> = {}
-  for (const m of hash.matchAll(regex)) {
-    if (m[1] && m[2]) {
-      params[decodeURIComponent(m[1])] = decodeURIComponent(m[2])
-    }
-  }
+  const params = Object.fromEntries(new URLSearchParams(hash))
   return (Object.keys(params).length && params) || {}
 }
 
@@ -142,9 +137,6 @@ const autoconfigOauth = async () => {
       ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
       ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
       ...((v?.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
-      ...((pkce === undefined &&
-        v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) ||
-        {}),
       ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
       ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
       ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
