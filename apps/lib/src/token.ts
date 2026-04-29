@@ -85,4 +85,12 @@ export const checkToken = () => {
   return inFlight
 }
 
-watch(accessToken, async () => await checkToken())
+watch(
+  [config, accessToken],
+  async ([c, a]) => {
+    if (c && a) {
+      await checkToken()
+    }
+  },
+  { immediate: true }
+)
