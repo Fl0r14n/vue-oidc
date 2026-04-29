@@ -1,182 +1,73 @@
-## Vue OAuth
+# vue-oidc
 
-> `vue-oidc` is a fully **OAuth 2.1** compliant vue library. The library supports all the 4 flows:
-> * **resource**
-> * **implicit**
-> * **authorization code**
-> * **client credentials**
+OAuth 2.1 / OpenID Connect Vue 3 library, published as `vue-oidc` on npm.
 
-> Supports OIDC
+This repo is a Bun monorepo with two packages:
 
-> `PKCE` support for authorization code with code verification
+- **`apps/lib`** — the [`vue-oidc`](apps/lib/README.md) library source. Built with `tsdown`, published to npm.
+- **`apps/app`** — `vue-oidc-client`, a demo consumer app linking the lib via `workspace:*`.
 
-### How to
+## Stack
 
-#### Configure your oauth client
+- Vue 3, Vue Router, Pinia, Vuetify (app)
+- Vite + optional Bun SSR (`Bun.serve` + Vite middleware)
+- `tsdown` for the library bundle (ESM, `.d.mts` types)
+- `bun:test` for library tests, `biome` for lint/format
 
-```typescript
-import { createOAuth } from 'vue-oidc'
+## Setup
 
-const oauth = createOAuth({
-  config: {
-    issuerPath: 'https://accounts.google.com',
-    clientId: '<your_client_id>'
-  }
-})
-app = createApp(App)
-app.use(oauth)
+Requires [Bun](https://bun.sh). Never use `npm`/`yarn`/`pnpm`.
+
+```sh
+bun install
 ```
 
-* for oauth Authorization flow, add the oauth_callback to router
+## Run
 
-```typescript
-router.addRoute({
-  path: '/oauth_callback',
-  name: 'oauthCallback',
-  component: () => null as any,
-  beforeEnter: oauthCallbackGuard
-})
+All commands from repo root.
+
+```sh
+bun run dev           # start dev servers for all workspaces (app on port 3000)
+bun run ssr           # SSR dev server (Vite middleware + Bun.serve, requires .cert/)
+bun run build         # build lib (tsdown) + app (vite build)
+bun run test          # run lib tests
+bun run lint          # biome lint
+bun run format        # biome format --write
+bun run check         # biome check --write (lint + format)
 ```
 
-where `oauthCallbackGuard` can be something like this:
+Per-package:
 
-```typescript
-import type { NavigationGuardWithThis, RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
-import { useOAuth } from 'vue-oidc'
-
-export const oauthCallbackGuard: NavigationGuardWithThis<undefined> = async (to: RouteLocationNormalized) => {
-  const appId = 'app'
-  const { oauthCallback } = useOAuth()
-  await oauthCallback(`${appId}:${to.fullPath}`)
-  const { returnUrl } = to.query
-  return ((returnUrl && { path: returnUrl }) || { name: 'main', params: to.params }) as RouteLocationRaw
-}
+```sh
+bun --filter vue-oidc build           # build lib only
+bun --filter vue-oidc test            # lib tests only
+bun --filter vue-oidc-client dev      # app dev server only
 ```
 
-#### Use oauth store
+## App env vars
 
-```typescript
-const oauth = useOAuth()
+`VITE_`-prefixed (Vite convention):
+
+- `VITE_OAUTH_ISSUER_PATH`, `VITE_OAUTH_CLIENT_ID`, `VITE_OAUTH_SCOPE`, `VITE_OAUTH_TYPE`, `VITE_OAUTH_STATE`
+- `VITE_APP_DOMAIN` (defaults to `globalThis.location?.origin`)
+- `VITE_API_BASE`, `VITE_API_PATH`, `VITE_API_INSTANCE`
+- `VITE_THEME` (default `light`)
+- `PORT` overrides default 3000
+
+## TLS for SSR
+
+Place `key.pem` + `cert.pem` in `.cert/`. Dev SSR server uses HTTPS when present. See [.cert/README.md](.cert/README.md).
+
+## Library docs
+
+See [`apps/lib/README.md`](apps/lib/README.md) for usage, configuration, and IdP examples (Keycloak, Azure, Google).
+
+## Publishing
+
+```sh
+bun run publish       # builds lib and publishes vue-oidc to npm
 ```
 
-* other miscellaneous stores: `useOAuthConfig()`, `useOAuthToken()`, `useOAuthUser()`, `useOAuthHttp()`
-  and `useOAuthInterceptors()`
+## License
 
-#### Use Oauth functions (Optional)
-
-```typescript
-import { inject } from 'vue'
-
-const login = inject('login') //oauth login function
-const logout = inject('logout') //oauth logout function
-const http = inject('http') //axios http which will append authorization token  
-const oauthCallback = inject('oauth-callback') // if you want to call this from vue component not guard
-```
-
-#### OAuth component
-
-OAuth component is provided to quickly bootstrap oauth functionality
-
-```typescript
-import OAuth from 'vue-oidc/component'
-```
-
-```vue
-
-<OAuth type="code" :redirect-uri="redirectUri" :logout-redirect-uri="logoutRedirectUri" />
-```
-
-if `logout-redirect-uri` is not used than token revoke endpoint will be used for logout
-
-for oauth resource flow should be the following
-
-```vue
-
-<OAuth type="password" />
-```
-
-To use the component correctly, make sure of the following:
-
-```typescript
-import { createVuetify } from 'vuetify'
-import { createI18n, useI18n } from 'vue-i18n'
-import { createVueI18nAdapter } from 'vuetify/locale/adapters/vue-i18n'
-
-const i18n = createI18n({
-  messages: {
-    en: {
-      oauth: {
-        login: 'Login',
-        logout: 'Logout',
-        username: 'Username',
-        password: 'Password',
-        usernameRequired: 'Name is required',
-        passwordRequired: 'Password is required',
-        usernameLength: 'Name must be less than {0} characters',
-        passwordLength: 'Password must be less than {0} characters'
-      }
-    }
-  },
-})
-
-app.use(i18n).use(createVuetify({
-  locale: {
-    adapter: createVueI18nAdapter({ i18n, useI18n } as any)
-  }
-}))
-```
-
-### Sample configs
-
-***Keycloak*** example for **oidc** with autodiscovery
-
-```typescript
-const keycloakOpenIDConfig = {
-  config: {
-    issuerPath: 'http://localhost:8080/realms/<some-realm>',
-    clientId: '<your_client_id>',
-  }
-};
-```
-
-***Azure*** example
-
-```typescript
-const azureOpenIDConfig = {
-  config: {
-    issuerPath: 'https://login.microsoftonline.com/common/v2.0', // for common make sure you app has "signInAudience": "AzureADandPersonalMicrosoftAccount",
-    clientId: '<your_client_id>',
-    scope: 'openid profile email offline_access',
-    pkce: true // manually, since is required, but code_challenge_methods_supported is not in openid configuration
-  }
-}
-```
-
-***Google*** example
-
-```typescript
-const googleOpenIDConfig = {
-  type: OAuthType.AUTHORIZATION_CODE,
-  config: {
-    issuerPath: 'https://accounts.google.com',
-    clientId: '<your_client_id>',
-    clientSecret: '<your_client_secret>',
-    scope: 'openid profile email'
-  }
-}
-```
-
-## Installing:
-
-```
-bun i vue-oidc --save
-```
-
-## App Requirements
-
-* vue3
-* vuetify/vue-18n if using the `OAuth` component
-
-#### Licensing
-
-[MIT License](LICENSE)
+MIT

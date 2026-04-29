@@ -83,16 +83,16 @@ import OAuth from 'vue-oidc/component'
 
 ```vue
 
-<OAuth type="code" :redirect-uri="redirectUri" :logout-redirect-uri="logoutRedirectUri" />
+<OAuth response-type="code" :redirect-uri="redirectUri" :logout-redirect-uri="logoutRedirectUri" />
 ```
 
 if `logout-redirect-uri` is not used than token revoke endpoint will be used for logout
 
-for oauth resource flow should be the following
+for oauth resource flow (default when no `response-type` is set) should be the following
 
 ```vue
 
-<OAuth type="password" />
+<OAuth />
 ```
 
 To use the component correctly, make sure of the following:
@@ -156,7 +156,6 @@ const azureOpenIDConfig = {
 
 ```typescript
 const googleOpenIDConfig = {
-  type: OAuthType.AUTHORIZATION_CODE,
   config: {
     issuerPath: 'https://accounts.google.com',
     clientId: '<your_client_id>',

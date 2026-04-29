@@ -18,10 +18,10 @@ export const oauthFunctions: OAuthFunctions = {
             tokenPath,
             {
               client_id: clientId,
-              ...((clientSecret && { client_secret: clientSecret }) || {}),
+              ...(clientSecret && { client_secret: clientSecret }),
               grant_type: 'refresh_token',
               refresh_token,
-              ...((scope && { scope }) || {})
+              ...(scope && { scope })
             },
             {
               headers: HEADERS
@@ -42,8 +42,8 @@ export const oauthFunctions: OAuthFunctions = {
           .post(
             revokePath,
             {
-              ...((clientId && { client_id: clientId }) || {}),
-              ...((clientSecret && { client_secret: clientSecret }) || {}),
+              ...(clientId && { client_id: clientId }),
+              ...(clientSecret && { client_secret: clientSecret }),
               token: access_token,
               token_type_hint: 'access_token'
             },
@@ -58,8 +58,8 @@ export const oauthFunctions: OAuthFunctions = {
           .post(
             revokePath,
             {
-              ...((clientId && { client_id: clientId }) || {}),
-              ...((clientSecret && { client_secret: clientSecret }) || {}),
+              ...(clientId && { client_id: clientId }),
+              ...(clientSecret && { client_secret: clientSecret }),
               token: refresh_token,
               token_type_hint: 'refresh_token'
             },
@@ -84,11 +84,11 @@ export const oauthFunctions: OAuthFunctions = {
             {
               code,
               client_id: clientId,
-              ...((clientSecret && { client_secret: clientSecret }) || {}),
+              ...(clientSecret && { client_secret: clientSecret }),
               redirect_uri,
               grant_type: 'authorization_code',
-              ...((scope && { scope }) || {}),
-              ...((code_verifier && { code_verifier }) || {})
+              ...(scope && { scope }),
+              ...(code_verifier && { code_verifier })
             },
             {
               headers: HEADERS
@@ -134,9 +134,9 @@ export const oauthFunctions: OAuthFunctions = {
             tokenPath,
             {
               client_id: clientId,
-              ...((clientSecret && { client_secret: clientSecret }) || {}),
+              ...(clientSecret && { client_secret: clientSecret }),
               grant_type: OAuthType.RESOURCE,
-              ...((scope && { scope }) || {}),
+              ...(scope && { scope }),
               username,
               password
             },

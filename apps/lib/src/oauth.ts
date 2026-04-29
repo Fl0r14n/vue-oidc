@@ -1,8 +1,8 @@
 import { ref } from 'vue'
 import { config } from './config'
 import { oauthFunctions } from './functions'
-import { verifyJwt } from './jwt'
-import { token } from './token'
+import { jwt } from './jwt'
+import { autoconfigOauth, token } from './token'
 import type {
   AuthorizationCodeParameters,
   ClientCredentialConfig,
@@ -37,7 +37,7 @@ const generateNonce = (scope: string) => {
 
 const checkNonce = async (parameters: Record<string, string>) => {
   if (parameters.error) return parameters
-  const payload = await verifyJwt(parameters.id_token)
+  const payload = await jwt(parameters.id_token)
   if (payload?.error || payload?.nonce !== token.value?.nonce) {
     return { error: (payload?.error as string) || 'Invalid nonce' }
   }
@@ -59,6 +59,8 @@ const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
   authorizationUrl += (authorizePath.includes('?') && '&') || '?'
   authorizationUrl += `client_id=${clientId}`
   token.value = { ...token.value, redirect_uri: parameters.redirectUri }
+  authorizationUrl += `&access_type=${parameters.accessType || 'offline'}`
+  authorizationUrl += `&prompt=${parameters.prompt || ''}`
   authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
   authorizationUrl += `&response_type=${parameters.responseType}`
   authorizationUrl += `&scope=${encodeURIComponent(scope)}`
@@ -69,6 +71,13 @@ const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
 const parseOauthUri = (hash: string) => {
   const params = Object.fromEntries(new URLSearchParams(hash))
   return (Object.keys(params).length && params) || {}
+}
+
+const checkCode = async () => {
+  const parameters = await oauthFunctions.authorize(token.value, config.value)
+  if (parameters) {
+    token.value = await checkNonce(parameters)
+  }
 }
 
 export const state = ref<string>()
@@ -91,16 +100,17 @@ export const login = async (parameters?: OAuthParameters) => {
 
 export const logout = async (logoutRedirectUri?: string, state?: string) => {
   await autoconfigOauth()
-  const { logoutPath, clientId } = (config.value as OpenIdConfig) || {}
-  if (logoutRedirectUri && logoutPath) {
+  const { logoutPath, clientId, logoutRedirectUri: configLogoutRedirectUri } = (config.value as OpenIdConfig) || {}
+  const returnUri = logoutRedirectUri || configLogoutRedirectUri
+  if (returnUri && logoutPath) {
     const { id_token } = token.value
     const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
     const stateFwd = (state && `&state=${state}`) || ''
-    const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${logoutRedirectUri}${tokenHint}${stateFwd}`
+    const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${returnUri}${tokenHint}${stateFwd}`
     token.value = {}
     globalThis.location?.replace(logoutUrl)
   } else {
-    await oauthFunctions.revoke(token.value, config.value as OpenIdConfig)
+    await oauthFunctions.revoke(token.value, config.value)
     token.value = {}
   }
 }
@@ -127,32 +137,5 @@ export const oauthCallback = async (url?: string | URL) => {
     state.value = parameters?.state
     await autoconfigOauth()
     await checkCode()
-  }
-}
-
-const autoconfigOauth = async () => {
-  const v = await oauthFunctions.openIdConfiguration(config.value as OpenIdConfig)
-  if (v) {
-    config.value = {
-      ...config.value,
-      ...((v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }) || {}),
-      ...((v?.token_endpoint && { tokenPath: v.token_endpoint }) || {}),
-      ...((v?.revocation_endpoint && { revokePath: v.revocation_endpoint }) || {}),
-      ...((v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }) || {}),
-      ...((v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }) || {}),
-      ...((v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }) || {}),
-      ...((v?.jwks_uri && { jwksUri: v.jwks_uri }) || {}),
-      ...(((config.value as any)?.pkce === undefined &&
-        v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }) ||
-        {}),
-      ...{ scope: config.value?.scope || 'openid' }
-    }
-  }
-}
-
-const checkCode = async () => {
-  const parameters = await oauthFunctions.authorize(token.value, config.value as OpenIdConfig)
-  if (parameters) {
-    token.value = await checkNonce(parameters)
   }
 }

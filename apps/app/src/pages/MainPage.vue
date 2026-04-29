@@ -1,11 +1,13 @@
 <template>
-  <OAuth :type="type" :redirect-uri="redirectUri" :logout-redirect-uri="logoutRedirectUri" :state="state" />
+  <OAuth v-bind="config" />
 </template>
 <script setup lang="ts">
-import OAuth from 'vue-oidc/component'
+import OAuth, { type OAuthProps } from 'vue-oidc/component'
 
-const redirectUri = `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/oauth_callback`
-const logoutRedirectUri = `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/`
-const type = import.meta.env.VITE_OAUTH_TYPE || 'code'
-const state = import.meta.env.VITE_OAUTH_STATE || crypto.randomUUID()
+const config: OAuthProps = {
+  responseType: import.meta.env.VITE_OAUTH_TYPE || 'code',
+  redirectUri: `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/oauth_callback`,
+  logoutRedirectUri: `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/`,
+  state: import.meta.env.VITE_OAUTH_STATE || crypto.randomUUID()
+}
 </script>

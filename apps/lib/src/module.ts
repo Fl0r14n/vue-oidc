@@ -1,10 +1,11 @@
 import type { App } from 'vue'
 import { config, ignoredPaths, oauthConfig, storageKey } from './config'
 import { oauthFunctions } from './functions'
+import { authorizationInterceptor, http, unauthorizedInterceptor } from './http'
 import { login, logout, oauthCallback } from './oauth'
-import { accessToken, error, errorDescription, hasError, isAuthorized, isExpiredToken, status, token, type } from './token'
+import { accessToken, error, errorDescription, hasError, isAuthorized, status, token, type } from './token'
 import type { OAuth, OAuthConfig } from './types'
-import { authorizationInterceptor, http, unauthorizedInterceptor, user } from './user'
+import { user } from './user'
 
 export const createOAuth = (cfg?: OAuthConfig) => {
   oauthConfig.value = {
@@ -45,6 +46,5 @@ export const useOAuth = () => ({
   errorDescription,
   login,
   logout,
-  isExpiredToken,
   oauthCallback
 })

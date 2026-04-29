@@ -46,6 +46,8 @@ export type ResourceOwnerParameters = {
 }
 
 export type AuthorizationCodeParameters = {
+  accessType?: 'online' | 'offline'
+  prompt?: 'none' | 'consent' | 'login' | 'select_account'
   redirectUri: string
   responseType: OAuthType.IMPLICIT | OAuthType.AUTHORIZATION_CODE | string
   state?: string
@@ -139,14 +141,14 @@ export type IntrospectInfo = UserInfo & {
 }
 
 export interface OAuthFunctions {
-  refresh: (token?: OAuthToken, config?: OpenIdConfig) => Promise<OAuthToken | undefined>
-  revoke: (token?: OAuthToken, config?: OpenIdConfig) => Promise<void>
-  authorize: (token?: OAuthToken, config?: OpenIdConfig) => Promise<OAuthToken | undefined>
+  refresh: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<OAuthToken | undefined>
+  revoke: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<void>
+  authorize: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<OAuthToken | undefined>
   resourceOwnerLogin: (parameters: ResourceOwnerParameters, config?: ResourceOwnerConfig) => Promise<OAuthToken | undefined>
   clientCredentialLogin: (config?: ClientCredentialConfig) => Promise<OAuthToken | undefined>
-  openIdConfiguration: (config?: OpenIdConfig) => Promise<OpenIdConfiguration | undefined>
-  userInfo: (config?: OpenIdConfig, instance?: AxiosInstance) => Promise<UserInfo | undefined>
-  introspect: (token?: OAuthToken, config?: OpenIdConfig) => Promise<IntrospectInfo | undefined>
+  openIdConfiguration: (config?: Partial<OpenIdConfig>) => Promise<OpenIdConfiguration | undefined>
+  userInfo: (config?: Partial<OpenIdConfig>, instance?: AxiosInstance) => Promise<UserInfo | undefined>
+  introspect: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<IntrospectInfo | undefined>
 }
 
 export interface OAuth {

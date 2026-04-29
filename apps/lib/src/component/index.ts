@@ -1,1 +1,1 @@
-export { default } from './OAuth.vue'
+export { default, type OAuthProps } from './OAuth.vue'

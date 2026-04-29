@@ -49,7 +49,15 @@
             </VCardText>
           </template>
           <template v-else>
-            <template v-if="type === OAuthType.RESOURCE">
+            <template v-if="responseType && responseType !== OAuthType.RESOURCE">
+              <VCardActions>
+                <VSpacer />
+                <VBtn @click="login(props as OAuthParameters)">
+                  {{ t("$vuetify.oauth.login") }}
+                </VBtn>
+              </VCardActions>
+            </template>
+            <template v-else>
               <VForm
                 ref="formRef"
                 v-model="form.valid"
@@ -91,22 +99,6 @@
                 </VCardActions>
               </VForm>
             </template>
-            <template v-else>
-              <VCardActions>
-                <VSpacer />
-                <VBtn
-                  @click="
-                    login({
-                      responseType: responseTypeValue,
-                      redirectUri: getRedirectUri(),
-                      state,
-                    })
-                  "
-                >
-                  {{ t("$vuetify.oauth.login") }}
-                </VBtn>
-              </VCardActions>
-            </template>
           </template>
         </template>
       </VCard>
@@ -115,7 +107,7 @@
 </template>
 <script setup lang="ts">
 import { mdiAccount, mdiAccountOutline, mdiEmailOutline, mdiEye, mdiEyeOff, mdiLockOutline } from '@mdi/js'
-import { computed, shallowRef, useTemplateRef, watch } from 'vue'
+import { shallowRef, useTemplateRef, watch } from 'vue'
 import { OAuthType, useOAuth, useOAuthUser } from 'vue-oidc'
 import { useLocale } from 'vuetify'
 import {
@@ -134,23 +126,15 @@ import {
   VSpacer,
   VTextField
 } from 'vuetify/components'
+import type { AuthorizationCodeParameters, OAuthParameters, ResourceOwnerParameters } from '../types'
+
+export type OAuthProps = Partial<ResourceOwnerParameters & AuthorizationCodeParameters & { logoutRedirectUri: string }>
 
 const length = 128
 const { t } = useLocale()
 const { login, logout, isAuthorized, hasError, errorDescription } = useOAuth()
 const user = useOAuthUser()
-const props = withDefaults(
-  defineProps<{
-    type?: OAuthType | string
-    logoutRedirectUri?: string
-    redirectUri?: string
-    responseType?: string
-    state?: string
-  }>(),
-  {
-    type: 'password'
-  }
-)
+const props = defineProps<OAuthProps>()
 const visible = shallowRef(false)
 const showError = shallowRef(false)
 const formRef = useTemplateRef('formRef')
@@ -158,8 +142,8 @@ const menu = shallowRef(false)
 const form = shallowRef({
   valid: false,
   model: {
-    username: '',
-    password: ''
+    username: props.username || '',
+    password: props.password || ''
   },
   rules: {
     username: [
@@ -185,13 +169,6 @@ const signOut = async () => {
   menu.value = false
   await logout(props.logoutRedirectUri)
 }
-
-const getRedirectUri = () => {
-  const { origin, pathname, search } = globalThis.location || {}
-  return props.redirectUri || `${origin}${pathname}${search}`
-}
-
-const responseTypeValue = computed((): string => props.responseType || props.type || OAuthType.AUTHORIZATION_CODE)
 
 watch(
   user,
