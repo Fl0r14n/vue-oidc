@@ -1,6 +1,6 @@
 {
   "name": "vue-oidc",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "author": "Fl0r14n <florian.chis@gmail.com>",
   "homepage": "https://github.com/Fl0r14n/vue-oidc",
   "description": "A fully OAuth2.1 compliant vue library",
@@ -47,7 +47,7 @@
     "@mdi/js": "^7",
     "axios": "^1",
     "vue": "^3",
-    "vuetify": "^3"
+    "vuetify": ">=3"
   },
   "peerDependenciesMeta": {
     "@mdi/js": {
