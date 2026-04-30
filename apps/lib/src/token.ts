@@ -7,7 +7,7 @@ import { OAuthStatus } from './types'
 
 export const token = storageRef<OAuthToken>(storageKey, {})
 
-const isExpiredToken = (token?: OAuthToken) => (token?.expires && Date.now() > token.expires) || false
+export const isExpiredToken = (token?: OAuthToken) => (token?.expires && Date.now() > token.expires) || false
 
 export const type = computed(() => token.value?.type)
 
