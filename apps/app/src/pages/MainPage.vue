@@ -8,6 +8,7 @@ const config: OAuthProps = {
   responseType: import.meta.env.VITE_OAUTH_TYPE || 'code',
   redirectUri: `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/oauth_callback`,
   logoutRedirectUri: `${import.meta.env.VITE_APP_DOMAIN || globalThis.location?.origin}/`,
-  state: import.meta.env.VITE_OAUTH_STATE || crypto.randomUUID()
+  state: import.meta.env.VITE_OAUTH_STATE || crypto.randomUUID(),
+  accessType: 'offline'
 }
 </script>

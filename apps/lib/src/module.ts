@@ -3,7 +3,7 @@ import { config, ignoredPaths, oauthConfig, storageKey } from './config'
 import { oauthFunctions } from './functions'
 import { authorizationInterceptor, http, unauthorizedInterceptor } from './http'
 import { login, logout, oauthCallback } from './oauth'
-import { accessToken, error, errorDescription, hasError, isAuthorized, isExpiredToken, status, token, type } from './token'
+import { accessToken, autoconfigOauth, error, errorDescription, hasError, isAuthorized, isExpiredToken, status, token, type } from './token'
 import type { OAuth, OAuthConfig } from './types'
 import { user } from './user'
 
@@ -47,5 +47,6 @@ export const useOAuth = () => ({
   login,
   logout,
   oauthCallback,
-  isExpiredToken
+  isExpiredToken,
+  autoconfigOauth
 })

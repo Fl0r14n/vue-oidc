@@ -59,8 +59,10 @@ const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
   authorizationUrl += (authorizePath.includes('?') && '&') || '?'
   authorizationUrl += `client_id=${clientId}`
   token.value = { ...token.value, redirect_uri: parameters.redirectUri }
-  authorizationUrl += `&access_type=${parameters.accessType || 'offline'}`
-  authorizationUrl += `&prompt=${parameters.prompt || ''}`
+  if (parameters.accessType) {
+    authorizationUrl += `&access_type=${parameters.accessType}`
+    authorizationUrl += `&prompt=${parameters.prompt || ''}`
+  }
   authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
   authorizationUrl += `&response_type=${parameters.responseType}`
   authorizationUrl += `&scope=${encodeURIComponent(scope)}`
