@@ -2,7 +2,7 @@ import type { App } from 'vue'
 import { config, ignoredPaths, oauthConfig, storageKey } from './config'
 import { oauthFunctions } from './functions'
 import { authorizationInterceptor, http, unauthorizedInterceptor } from './http'
-import { login, logout, oauthCallback } from './oauth'
+import { login, logout, oauthCallback, state } from './oauth'
 import { accessToken, autoconfigOauth, error, errorDescription, hasError, isAuthorized, isExpiredToken, status, token, type } from './token'
 import type { OAuth, OAuthConfig } from './types'
 import { user } from './user'
@@ -44,6 +44,7 @@ export const useOAuth = () => ({
   error,
   hasError,
   errorDescription,
+  state,
   login,
   logout,
   oauthCallback,
