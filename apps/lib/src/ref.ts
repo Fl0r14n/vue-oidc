@@ -1,4 +1,4 @@
-import { type Ref, ref, watch } from 'vue'
+import { type MaybeRefOrGetter, type Ref, ref, toValue, type WatchHandle, watch } from 'vue'
 
 const get = (key: string) => {
   const value = globalThis.localStorage?.getItem(key)
@@ -9,35 +9,25 @@ const set = (key: string, value: any) => {
   globalThis.localStorage?.setItem(key, JSON.stringify(value))
 }
 
-export const storageRef = <T>(key: Ref<string> | string, initial?: T, map?: (v: any) => T): Ref<T> => {
+export const storageRef = <T>(key: MaybeRefOrGetter<string>, initial?: T, map?: (v: any) => T): Ref<T> => {
   const model = ref<T>(map?.(initial) || (initial as T))
-  if (typeof key === 'string') {
-    const v = get(key)
-    model.value = map?.(v || initial) || v || initial
-    // start watching after we get the value from storage
-    watch(
-      model,
-      async m => {
-        await set(key, m)
-      },
-      { deep: true }
-    )
-  } else {
-    watch(
-      key,
-      async k => {
-        const v = get(k)
-        model.value = map?.(v || initial) || v || initial
-        watch(
-          model,
-          async m => {
-            set(k, m)
-          },
-          { deep: true }
-        )
-      },
-      { immediate: true }
-    )
-  }
+  // restart the model watcher per key so a read never writes and a stale watcher can't write to the old key
+  let stop: WatchHandle | undefined
+  watch(
+    () => toValue(key),
+    k => {
+      stop?.()
+      const v = get(k)
+      model.value = map?.(v || initial) || v || initial
+      stop = watch(
+        model,
+        async m => {
+          set(k, m)
+        },
+        { deep: true }
+      )
+    },
+    { immediate: true }
+  )
   return model as Ref<T>
 }
