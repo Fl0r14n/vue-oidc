@@ -1,23 +1,7 @@
-import { beforeEach, describe, expect, it, jest, mock } from 'bun:test'
-import { ref } from 'vue'
-
-mock.module('./config', () => ({
-  config: ref({})
-}))
-
-mock.module('./token', () => ({
-  token: ref({})
-}))
-
-mock.module('./functions', () => ({
-  oauthFunctions: {
-    resourceOwnerLogin: jest.fn(),
-    clientCredentialLogin: jest.fn(),
-    openIdConfiguration: jest.fn(),
-    revoke: jest.fn(),
-    authorize: jest.fn()
-  }
-}))
+import { beforeEach, describe, expect, it, jest } from 'bun:test'
+import { createOAuth } from './module'
+import type { OAuthInstance } from './types'
+import { OAuthType } from './types'
 
 ;(globalThis as any).crypto = {
   getRandomValues: jest.fn((arr: Uint8Array) => {
@@ -36,47 +20,55 @@ const mockLocation = {
 }
 ;(globalThis as any).location = mockLocation
 
-import { config } from './config'
-import { oauthFunctions } from './functions'
-import { login, logout, oauthCallback, state } from './oauth'
-import { token } from './token'
-import { OAuthType } from './types'
-
 describe('oauth', () => {
+  let oauth: OAuthInstance
+  let functions: {
+    resourceOwnerLogin: jest.Mock
+    clientCredentialLogin: jest.Mock
+    openIdConfiguration: jest.Mock
+    revoke: jest.Mock
+    authorize: jest.Mock
+  }
+
   beforeEach(() => {
+    globalThis.localStorage?.clear()
     jest.clearAllMocks()
-    token.value = {}
-    config.value = {}
-    state.value = undefined
     mockLocation.hash = ''
     mockLocation.search = ''
-    ;(oauthFunctions.openIdConfiguration as any).mockResolvedValue(undefined)
+    functions = {
+      resourceOwnerLogin: jest.fn(),
+      clientCredentialLogin: jest.fn(),
+      openIdConfiguration: jest.fn().mockResolvedValue(undefined),
+      revoke: jest.fn(),
+      authorize: jest.fn()
+    }
+    oauth = createOAuth({ functions })
   })
 
   describe('login', () => {
     it('should perform client credential login if no parameters provided', async () => {
       const mockToken = { access_token: 'cc-token' }
-      ;(oauthFunctions.clientCredentialLogin as any).mockResolvedValue(mockToken)
+      functions.clientCredentialLogin.mockResolvedValue(mockToken)
 
-      await login()
+      await oauth.login()
 
-      expect(oauthFunctions.clientCredentialLogin).toHaveBeenCalled()
-      expect(token.value).toEqual(mockToken)
+      expect(functions.clientCredentialLogin).toHaveBeenCalled()
+      expect(oauth.token.value).toEqual(mockToken)
     })
 
     it('should perform resource owner login if password is provided', async () => {
       const params = { username: 'user', password: 'pass' }
       const mockToken = { access_token: 'ro-token' }
-      ;(oauthFunctions.resourceOwnerLogin as any).mockResolvedValue(mockToken)
+      functions.resourceOwnerLogin.mockResolvedValue(mockToken)
 
-      await login(params)
+      await oauth.login(params)
 
-      expect(oauthFunctions.resourceOwnerLogin).toHaveBeenCalledWith(params, config.value)
-      expect(token.value).toEqual(mockToken)
+      expect(functions.resourceOwnerLogin).toHaveBeenCalledWith(params, oauth.typeConfig.value)
+      expect(oauth.token.value).toEqual(mockToken)
     })
 
     it('should redirect to authorization URL for authorization code flow', async () => {
-      config.value = {
+      oauth.typeConfig.value = {
         authorizePath: 'https://auth.com/authorize',
         clientId: 'client123',
         scope: 'openid profile'
@@ -87,7 +79,7 @@ describe('oauth', () => {
         state: 'random-state'
       }
 
-      await login(params)
+      await oauth.login(params)
 
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('https://auth.com/authorize?client_id=client123'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('redirect_uri=https%3A%2F%2Fapp.com%2Fcallback'))
@@ -96,7 +88,7 @@ describe('oauth', () => {
     })
 
     it('should handle PKCE if enabled', async () => {
-      config.value = {
+      oauth.typeConfig.value = {
         authorizePath: 'https://auth.com/authorize',
         clientId: 'client123',
         pkce: true,
@@ -107,9 +99,9 @@ describe('oauth', () => {
         responseType: 'code'
       }
 
-      await login(params)
+      await oauth.login(params)
 
-      expect(token.value.code_verifier).toBeDefined()
+      expect(oauth.token.value.code_verifier).toBeDefined()
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('code_challenge='))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('code_challenge_method=S256'))
     })
@@ -118,27 +110,27 @@ describe('oauth', () => {
   describe('logout', () => {
     it('should revoke token if no redirect URI provided', async () => {
       const initialToken = { access_token: 'token-to-revoke' }
-      token.value = initialToken
-      await logout()
+      oauth.token.value = initialToken
+      await oauth.logout()
 
-      expect(oauthFunctions.revoke).toHaveBeenCalledWith(initialToken, config.value)
-      expect(token.value).toEqual({})
+      expect(functions.revoke).toHaveBeenCalledWith(initialToken, oauth.typeConfig.value)
+      expect(oauth.token.value).toEqual({})
     })
 
     it('should redirect to logout path if provided with redirect URI', async () => {
-      config.value = {
+      oauth.typeConfig.value = {
         logoutPath: 'https://auth.com/logout',
         clientId: 'client123'
       }
-      token.value = { id_token: 'id-token-hint' }
+      oauth.token.value = { id_token: 'id-token-hint' }
 
-      await logout('https://app.com/home', 'logout-state')
+      await oauth.logout('https://app.com/home', 'logout-state')
 
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('https://auth.com/logout?client_id=client123'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('post_logout_redirect_uri=https://app.com/home'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('id_token_hint=id-token-hint'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('state=logout-state'))
-      expect(token.value).toEqual({})
+      expect(oauth.token.value).toEqual({})
     })
   })
 
@@ -146,49 +138,49 @@ describe('oauth', () => {
     it('should handle implicit flow redirect (hash)', async () => {
       mockLocation.hash = '#access_token=at&token_type=Bearer&state=s123'
 
-      await oauthCallback()
+      await oauth.oauthCallback()
 
-      expect(token.value).toMatchObject({
+      expect(oauth.token.value).toMatchObject({
         access_token: 'at',
         token_type: 'Bearer',
         type: OAuthType.IMPLICIT
       })
-      expect(state.value).toBe('s123')
+      expect(oauth.state.value).toBe('s123')
     })
 
     it('should handle authorization code redirect (search)', async () => {
       mockLocation.search = '?code=c123&state=s456'
-      ;(oauthFunctions.authorize as any).mockResolvedValue({ access_token: 'new-at' })
+      functions.authorize.mockResolvedValue({ access_token: 'new-at' })
 
-      await oauthCallback()
+      await oauth.oauthCallback()
 
-      expect(token.value).toMatchObject({
+      expect(oauth.token.value).toMatchObject({
         access_token: 'new-at'
       })
-      expect(state.value).toBe('s456')
+      expect(oauth.state.value).toBe('s456')
     })
 
     it('should validate nonce if openid scope was used', async () => {
       // Use a real JWT with encoded nonce payload
       const jwtPayload = btoa(JSON.stringify({ nonce: 'n123' }))
       mockLocation.hash = `#access_token=at&id_token=header.${jwtPayload}.sig&nonce=n123`
-      token.value = { nonce: 'mismatch' }
+      oauth.token.value = { nonce: 'mismatch' }
 
-      await oauthCallback()
+      await oauth.oauthCallback()
 
-      expect(token.value.error).toBe('Invalid nonce')
+      expect(oauth.token.value.error).toBe('Invalid nonce')
     })
 
     it('should accept id_token without signature verification when strictJwt is false', async () => {
       const jwtPayload = btoa(JSON.stringify({ nonce: 'n123' }))
       mockLocation.hash = `#access_token=at&id_token=header.${jwtPayload}.sig`
-      token.value = { nonce: 'n123' }
+      oauth.token.value = { nonce: 'n123' }
 
-      await oauthCallback()
+      await oauth.oauthCallback()
 
-      expect(token.value.error).toBeUndefined()
-      expect(token.value.access_token).toBe('at')
-      expect(token.value.type).toBe(OAuthType.IMPLICIT)
+      expect(oauth.token.value.error).toBeUndefined()
+      expect(oauth.token.value.access_token).toBe('at')
+      expect(oauth.token.value.type).toBe(OAuthType.IMPLICIT)
     })
   })
 
@@ -202,11 +194,11 @@ describe('oauth', () => {
         code_challenge_methods_supported: ['S256'],
         end_session_endpoint: 'https://auth.com/logout'
       }
-      ;(oauthFunctions.openIdConfiguration as any).mockResolvedValue(wellKnown)
+      functions.openIdConfiguration.mockResolvedValue(wellKnown)
 
-      await login()
+      await oauth.login()
 
-      expect(config.value).toMatchObject({
+      expect(oauth.typeConfig.value).toMatchObject({
         authorizePath: 'https://auth.com/a',
         tokenPath: 'https://auth.com/t',
         revokePath: 'https://auth.com/r',

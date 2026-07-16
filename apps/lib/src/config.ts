@@ -1,26 +1,39 @@
 import { computed, ref } from 'vue'
 import type { OAuthConfig, OAuthTypeConfig } from './types'
 
-export const oauthConfig = ref<OAuthConfig>({
-  storageKey: 'token',
-  ignorePaths: [],
-  strictJwt: true
-})
+export const createConfig = (cfg?: OAuthConfig) => {
+  const oauthConfig = ref<OAuthConfig>({
+    storageKey: 'token',
+    ignorePaths: [],
+    strictJwt: true,
+    ...cfg
+  })
 
-export const config = computed({
-  get: () => oauthConfig.value.config,
-  set: config =>
-    (oauthConfig.value.config = {
-      ...oauthConfig.value.config,
-      ...config
-    } as OAuthTypeConfig)
-})
+  const config = computed({
+    get: () => oauthConfig.value.config,
+    set: config =>
+      (oauthConfig.value.config = {
+        ...oauthConfig.value.config,
+        ...config
+      } as OAuthTypeConfig)
+  })
 
-export const ignoredPaths = computed(() => oauthConfig.value.ignorePaths)
+  const ignoredPaths = computed(() => oauthConfig.value.ignorePaths)
 
-export const storageKey = computed({
-  get: () => oauthConfig.value.storageKey || 'token',
-  set: storageKey => (oauthConfig.value.storageKey = storageKey)
-})
+  const storageKey = computed({
+    get: () => oauthConfig.value.storageKey || 'token',
+    set: storageKey => (oauthConfig.value.storageKey = storageKey)
+  })
 
-export const strictJwt = computed(() => oauthConfig.value.strictJwt)
+  const strictJwt = computed(() => oauthConfig.value.strictJwt)
+
+  return {
+    oauthConfig,
+    config,
+    ignoredPaths,
+    storageKey,
+    strictJwt
+  }
+}
+
+export type ConfigContext = ReturnType<typeof createConfig>

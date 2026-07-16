@@ -6,7 +6,7 @@ const HEADERS: RawAxiosRequestHeaders = {
   Accept: 'application/json'
 }
 
-export const oauthFunctions: OAuthFunctions = {
+export const defaultOAuthFunctions: OAuthFunctions = {
   refresh: async (token, config) => {
     const { tokenPath, clientId, clientSecret, scope } = config || {}
     const { refresh_token, type } = token || {}

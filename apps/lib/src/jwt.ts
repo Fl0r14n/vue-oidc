@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { watch } from 'vue'
-import { config, strictJwt } from './config'
+import type { ConfigContext } from './config'
 import type { OpenIdConfig } from './types'
 
 const parseJwt = (idToken?: string) => {
@@ -16,27 +16,31 @@ const parseJwt = (idToken?: string) => {
     : {}
 }
 
-export const jwt = async (idToken?: string) => {
-  if (!idToken) return {}
-  if (!jwksSet) return parseJwt(idToken)
-  const { issuerPath, clientId } = (config.value as OpenIdConfig) || {}
-  try {
-    const { payload } = await jwtVerify(idToken, jwksSet, {
-      ...(issuerPath && { issuer: issuerPath }),
-      ...(clientId && { audience: clientId })
-    })
-    return payload
-  } catch {
-    return { error: 'Invalid token' }
+export const createJwt = ({ config, strictJwt }: Pick<ConfigContext, 'config' | 'strictJwt'>) => {
+  let jwksSet: ReturnType<typeof createRemoteJWKSet> | undefined
+
+  watch(
+    [() => (config.value as OpenIdConfig)?.jwksUri, strictJwt],
+    ([jwksUri, strict]) => {
+      jwksSet = jwksUri && strict ? createRemoteJWKSet(new URL(jwksUri)) : undefined
+    },
+    { immediate: true }
+  )
+
+  return async (idToken?: string) => {
+    if (!idToken) return {}
+    if (!jwksSet) return parseJwt(idToken)
+    const { issuerPath, clientId } = (config.value as OpenIdConfig) || {}
+    try {
+      const { payload } = await jwtVerify(idToken, jwksSet, {
+        ...(issuerPath && { issuer: issuerPath }),
+        ...(clientId && { audience: clientId })
+      })
+      return payload
+    } catch {
+      return { error: 'Invalid token' }
+    }
   }
 }
 
-let jwksSet: ReturnType<typeof createRemoteJWKSet> | undefined
-
-watch(
-  [() => (config.value as OpenIdConfig)?.jwksUri, strictJwt],
-  ([jwksUri, strict]) => {
-    jwksSet = jwksUri && strict ? createRemoteJWKSet(new URL(jwksUri)) : undefined
-  },
-  { immediate: true }
-)
+export type Jwt = ReturnType<typeof createJwt>

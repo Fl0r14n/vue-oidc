@@ -31,10 +31,33 @@ bun --filter vue-oidc-client dev  # start app dev server (Vite, port 3000)
 ## Library (`apps/lib`)
 
 - **Build**: `tsdown` → ESM output to `dist/`, generates `.d.mts` types
-- **Tests**: `bun test` using `bun:test`. Only `oauth.spec.ts` and `ref.spec.ts`
+- **Tests**: `bun test` using `bun:test`. One spec per module (`config`, `token`, `oauth`, `http`, `user`, `module`, `ref`)
 - **Exports**: `vue-oidc` (main) and `vue-oidc/component` (raw `OAuth.vue` source)
 - **Peer deps**: `vue^3` (required), `vuetify^3`, `@mdi/js` (all optional)
 - **Runtime deps**: `axios` (never bundled per tsdown config)
+
+### Architecture (v4, instance-based)
+
+- All state lives on an `OAuthInstance` built by `createOAuth()` — no module-level state except the
+  active-instance pointer. Each source file exports a factory (`createConfig`, `createToken`, `createHttp`,
+  `createFlows`, `createUser`, `createJwt`); `module.ts` composes them inside a detached `effectScope`
+  (`dispose()` stops all watchers). Factories bind their dependencies via closures at construction —
+  never resolve state through the active pointer inside library internals, that reintroduces the
+  cross-request race under SSR.
+- Composable resolution order (`getActiveOAuth`): `inject(oauthKey)` during component setup →
+  `setOAuthResolver` hook → module pointer (set by `createOAuth` and `install`). The pointer exists so
+  composables work in router guards/stores where Vue has no injection context.
+- SSR: one `createOAuth()` + `app.use()` per request. Servers with a per-request context
+  (AsyncLocalStorage) should stash the instance there and register `setOAuthResolver` so concurrent
+  renders can't read each other's instance. The lib never imports `node:async_hooks`.
+- Behavior overrides are constructor input: `createOAuth({ functions: { refresh } })` merges over
+  `defaultOAuthFunctions`. Never mutate a shared functions object.
+
+### Test gotcha
+
+`ref.spec.ts` installs a `globalThis.localStorage` mock at module load and bun itself ships a real,
+process-persistent `localStorage` — either way state leaks across spec files. Any spec that creates
+instances must run `globalThis.localStorage?.clear()` in `beforeEach`.
 
 ## App (`apps/app`)
 

@@ -1,11 +1,11 @@
 import { ref } from 'vue'
-import { config } from './config'
-import { oauthFunctions } from './functions'
-import { jwt } from './jwt'
-import { autoconfigOauth, token } from './token'
+import type { ConfigContext } from './config'
+import type { Jwt } from './jwt'
+import type { TokenContext } from './token'
 import type {
   AuthorizationCodeParameters,
   ClientCredentialConfig,
+  OAuthFunctions,
   OAuthParameters,
   OpenIdConfig,
   ResourceOwnerConfig,
@@ -26,118 +26,133 @@ const pkce = async (value: string) => {
   return base64url(arrToString(new Uint8Array(buff)))
 }
 
-const generateNonce = (scope: string) => {
-  if (scope.indexOf('openid') > -1) {
-    const nonce = randomString()
-    token.value = { ...token.value, nonce }
-    return `&nonce=${nonce}`
-  }
-  return ''
-}
-
-const checkNonce = async (parameters: Record<string, string>) => {
-  if (parameters.error) return parameters
-  const payload = await jwt(parameters.id_token)
-  if (payload?.error || payload?.nonce !== token.value?.nonce) {
-    return { error: (payload?.error as string) || 'Invalid nonce' }
-  }
-  return parameters
-}
-
-const generateCodeChallenge = async (doPkce: any) => {
-  if (doPkce) {
-    const code_verifier = randomString()
-    token.value = { ...token.value, code_verifier }
-    return `&code_challenge=${await pkce(code_verifier)}&code_challenge_method=S256`
-  }
-  return ''
-}
-
-const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
-  const { authorizePath, clientId, scope = '', pkce } = config.value as any
-  let authorizationUrl = `${authorizePath}`
-  authorizationUrl += (authorizePath.includes('?') && '&') || '?'
-  authorizationUrl += `client_id=${clientId}`
-  token.value = { ...token.value, redirect_uri: parameters.redirectUri }
-  if (parameters.accessType) {
-    authorizationUrl += `&access_type=${parameters.accessType}`
-    authorizationUrl += `&prompt=${parameters.prompt || ''}`
-  }
-  authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
-  authorizationUrl += `&response_type=${parameters.responseType}`
-  authorizationUrl += `&scope=${encodeURIComponent(scope)}`
-  authorizationUrl += `&state=${encodeURIComponent(parameters.state || '')}`
-  return globalThis.location?.replace(`${authorizationUrl}${generateNonce(scope)}${await generateCodeChallenge(pkce)}`)
-}
-
 const parseOauthUri = (hash: string) => {
   const params = Object.fromEntries(new URLSearchParams(hash))
   return (Object.keys(params).length && params) || {}
 }
 
-const checkCode = async () => {
-  const parameters = await oauthFunctions.authorize(token.value, config.value)
-  if (parameters) {
-    token.value = await checkNonce(parameters)
-  }
-}
-
-export const state = ref<string>()
-
-export const login = async (parameters?: OAuthParameters) => {
-  await autoconfigOauth()
-  if (parameters && (parameters as ResourceOwnerParameters).password) {
-    token.value =
-      (await oauthFunctions.resourceOwnerLogin(parameters as ResourceOwnerParameters, config.value as ResourceOwnerConfig)) || {}
-  } else if (
-    parameters &&
-    (parameters as AuthorizationCodeParameters).redirectUri &&
-    (parameters as AuthorizationCodeParameters).responseType
-  ) {
-    await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
-  } else {
-    token.value = (await oauthFunctions.clientCredentialLogin(config.value as ClientCredentialConfig)) || {}
-  }
-}
-
-export const logout = async (logoutRedirectUri?: string, state?: string) => {
-  await autoconfigOauth()
-  const { logoutPath, clientId, logoutRedirectUri: configLogoutRedirectUri } = (config.value as OpenIdConfig) || {}
-  const returnUri = logoutRedirectUri || configLogoutRedirectUri
-  if (returnUri && logoutPath) {
-    const { id_token } = token.value
-    const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
-    const stateFwd = (state && `&state=${state}`) || ''
-    const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${returnUri}${tokenHint}${stateFwd}`
-    token.value = {}
-    globalThis.location?.replace(logoutUrl)
-  } else {
-    await oauthFunctions.revoke(token.value, config.value)
-    token.value = {}
-  }
-}
-
-export const oauthCallback = async (url?: string | URL) => {
-  const path = (url && new URL(url)) || globalThis.location || {}
-  const { hash, search } = path
-  const isImplicitRedirect = hash && /(access_token=)|(error=)/.test(hash)
-  const isAuthCodeRedirect = (search && /(code=)|(error=)/.test(search)) || (hash && /(code=)|(error=)/.test(hash))
-  if (isImplicitRedirect) {
-    const parameters = parseOauthUri(hash.substring(1))
-    token.value = {
-      ...(await checkNonce(parameters)),
-      type: OAuthType.IMPLICIT
+export const createFlows = (
+  { config }: Pick<ConfigContext, 'config'>,
+  { token, autoconfigOauth }: Pick<TokenContext, 'token' | 'autoconfigOauth'>,
+  functions: OAuthFunctions,
+  jwt: Jwt
+) => {
+  const generateNonce = (scope: string) => {
+    if (scope.indexOf('openid') > -1) {
+      const nonce = randomString()
+      token.value = { ...token.value, nonce }
+      return `&nonce=${nonce}`
     }
-    state.value = parameters?.state
-  } else if (isAuthCodeRedirect) {
-    const parameters = parseOauthUri(search?.substring(1) || hash?.substring(1))
-    token.value = {
-      ...token.value,
-      ...parameters
-      // do not set type yet. will be set by authorize function since it is a two-step process
+    return ''
+  }
+
+  const checkNonce = async (parameters: Record<string, string>) => {
+    if (parameters.error) return parameters
+    const payload = await jwt(parameters.id_token)
+    if (payload?.error || payload?.nonce !== token.value?.nonce) {
+      return { error: (payload?.error as string) || 'Invalid nonce' }
     }
-    state.value = parameters?.state
+    return parameters
+  }
+
+  const generateCodeChallenge = async (doPkce: any) => {
+    if (doPkce) {
+      const code_verifier = randomString()
+      token.value = { ...token.value, code_verifier }
+      return `&code_challenge=${await pkce(code_verifier)}&code_challenge_method=S256`
+    }
+    return ''
+  }
+
+  const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
+    const { authorizePath, clientId, scope = '', pkce } = config.value as any
+    let authorizationUrl = `${authorizePath}`
+    authorizationUrl += (authorizePath.includes('?') && '&') || '?'
+    authorizationUrl += `client_id=${clientId}`
+    token.value = { ...token.value, redirect_uri: parameters.redirectUri }
+    if (parameters.accessType) {
+      authorizationUrl += `&access_type=${parameters.accessType}`
+      authorizationUrl += `&prompt=${parameters.prompt || ''}`
+    }
+    authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
+    authorizationUrl += `&response_type=${parameters.responseType}`
+    authorizationUrl += `&scope=${encodeURIComponent(scope)}`
+    authorizationUrl += `&state=${encodeURIComponent(parameters.state || '')}`
+    return globalThis.location?.replace(`${authorizationUrl}${generateNonce(scope)}${await generateCodeChallenge(pkce)}`)
+  }
+
+  const checkCode = async () => {
+    const parameters = await functions.authorize(token.value, config.value)
+    if (parameters) {
+      token.value = await checkNonce(parameters)
+    }
+  }
+
+  const state = ref<string>()
+
+  const login = async (parameters?: OAuthParameters) => {
     await autoconfigOauth()
-    await checkCode()
+    if (parameters && (parameters as ResourceOwnerParameters).password) {
+      token.value = (await functions.resourceOwnerLogin(parameters as ResourceOwnerParameters, config.value as ResourceOwnerConfig)) || {}
+    } else if (
+      parameters &&
+      (parameters as AuthorizationCodeParameters).redirectUri &&
+      (parameters as AuthorizationCodeParameters).responseType
+    ) {
+      await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
+    } else {
+      token.value = (await functions.clientCredentialLogin(config.value as ClientCredentialConfig)) || {}
+    }
+  }
+
+  const logout = async (logoutRedirectUri?: string, state?: string) => {
+    await autoconfigOauth()
+    const { logoutPath, clientId, logoutRedirectUri: configLogoutRedirectUri } = (config.value as OpenIdConfig) || {}
+    const returnUri = logoutRedirectUri || configLogoutRedirectUri
+    if (returnUri && logoutPath) {
+      const { id_token } = token.value
+      const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
+      const stateFwd = (state && `&state=${state}`) || ''
+      const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${returnUri}${tokenHint}${stateFwd}`
+      token.value = {}
+      globalThis.location?.replace(logoutUrl)
+    } else {
+      await functions.revoke(token.value, config.value)
+      token.value = {}
+    }
+  }
+
+  const oauthCallback = async (url?: string | URL) => {
+    const path = (url && new URL(url)) || globalThis.location || {}
+    const { hash, search } = path
+    const isImplicitRedirect = hash && /(access_token=)|(error=)/.test(hash)
+    const isAuthCodeRedirect = (search && /(code=)|(error=)/.test(search)) || (hash && /(code=)|(error=)/.test(hash))
+    if (isImplicitRedirect) {
+      const parameters = parseOauthUri(hash.substring(1))
+      token.value = {
+        ...(await checkNonce(parameters)),
+        type: OAuthType.IMPLICIT
+      }
+      state.value = parameters?.state
+    } else if (isAuthCodeRedirect) {
+      const parameters = parseOauthUri(search?.substring(1) || hash?.substring(1))
+      token.value = {
+        ...token.value,
+        ...parameters
+        // do not set type yet. will be set by authorize function since it is a two-step process
+      }
+      state.value = parameters?.state
+      await autoconfigOauth()
+      await checkCode()
+    }
+  }
+
+  return {
+    state,
+    login,
+    logout,
+    oauthCallback
   }
 }
+
+export type FlowsContext = ReturnType<typeof createFlows>

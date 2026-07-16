@@ -1,5 +1,5 @@
-import type { AxiosInstance } from 'axios'
-import type { App, Ref } from 'vue'
+import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import type { App, ComputedRef, Ref, WritableComputedRef } from 'vue'
 
 export type ClientCredentialConfig = {
   tokenPath: string
@@ -67,6 +67,7 @@ export type OAuthConfig = {
   storageKey?: string
   ignorePaths?: RegExp[]
   strictJwt?: boolean
+  functions?: Partial<OAuthFunctions>
 
   [x: string]: any
 }
@@ -151,8 +152,35 @@ export interface OAuthFunctions {
   introspect: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<IntrospectInfo | undefined>
 }
 
-export interface OAuth {
+export interface OAuthInstance {
   install: (app: App) => void
+  /** stops this instance's watchers and clears the active pointer if it points here */
+  dispose: () => void
   config: Ref<OAuthConfig>
+  /** the provider/endpoint part of the config (`config.value.config`) */
+  typeConfig: WritableComputedRef<Partial<OAuthTypeConfig> | undefined>
+  storageKey: WritableComputedRef<string>
+  ignoredPaths: ComputedRef<RegExp[] | undefined>
   functions: OAuthFunctions
+  http: AxiosInstance
+  token: Ref<OAuthToken>
+  user: Ref<UserInfo | undefined>
+  state: Ref<string | undefined>
+  type: ComputedRef<OAuthType | undefined>
+  accessToken: ComputedRef<string | undefined>
+  status: ComputedRef<OAuthStatus>
+  isAuthorized: ComputedRef<boolean>
+  error: ComputedRef<string | undefined>
+  hasError: ComputedRef<boolean>
+  errorDescription: ComputedRef<string | undefined>
+  login: (parameters?: OAuthParameters) => Promise<void>
+  logout: (logoutRedirectUri?: string, state?: string) => Promise<void>
+  oauthCallback: (url?: string | URL) => Promise<void>
+  checkToken: () => Promise<void>
+  autoconfigOauth: () => Promise<void>
+  authorizationInterceptor: (req: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig>
+  unauthorizedInterceptor: (error: any) => Promise<never>
 }
+
+/** @deprecated use {@link OAuthInstance} */
+export type OAuth = OAuthInstance

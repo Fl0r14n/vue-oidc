@@ -62,6 +62,71 @@ const oauth = useOAuth()
 * other miscellaneous stores: `useOAuthConfig()`, `useOAuthToken()`, `useOAuthUser()`, `useOAuthHttp()`
   and `useOAuthInterceptors()`
 
+The composables resolve the current `OAuthInstance` — via `inject(oauthKey)` inside component setup, and via
+the last created/installed instance elsewhere (router guards, pinia stores). You can also hold on to the
+instance returned by `createOAuth()` directly; it exposes everything the composables do
+(`token`, `user`, `status`, `login`, `checkToken`, `http`, ...).
+
+#### Override oauth functions (Optional)
+
+Every network call (`refresh`, `revoke`, `authorize`, `userInfo`, ...) can be replaced per instance —
+no mutation of shared objects:
+
+```typescript
+import { createOAuth, defaultOAuthFunctions } from 'vue-oidc'
+
+const oauth = createOAuth({
+  config: {...},
+  functions: {
+    refresh: async (token, config) => {
+      const result = await defaultOAuthFunctions.refresh(token, config)
+      // custom handling
+      return result
+    }
+  }
+})
+```
+
+#### SSR
+
+Create and install **one instance per request** — instances are fully isolated (token, config, watchers).
+`dispose()` stops an instance's watchers when the render is done.
+
+If your server keeps a per-request context (e.g. `AsyncLocalStorage`), register a resolver so composables
+called outside setup resolve the *request's* instance even when concurrent renders interleave:
+
+```typescript
+// entry-server.ts
+import { createOAuth, setOAuthResolver, type OAuthInstance } from 'vue-oidc'
+
+const als = new AsyncLocalStorage<{ oauth?: OAuthInstance }>()
+setOAuthResolver(() => als.getStore()?.oauth) // once per process
+
+// per request:
+als.run({}, async () => {
+  const oauth = createOAuth({ config: {...} })
+  als.getStore()!.oauth = oauth
+  app.use(oauth)
+  try {
+    return await renderToString(app)
+  } finally {
+    oauth.dispose()
+  }
+})
+```
+
+The library itself never imports `node:async_hooks` — it stays runtime-agnostic.
+
+#### Migrating from v3
+
+* State moved from module scope onto the instance: multiple isolated instances are now possible and
+  SSR-safe. The composable API (`useOAuth()`, `useOAuthToken()`, ...) is unchanged.
+* Overriding behavior by mutating `useOAuthFunctions()` → pass `functions` to `createOAuth()` instead.
+* `OAuth` type → `OAuthInstance` (deprecated alias kept).
+* New exports: `oauthKey`, `defaultOAuthFunctions`, `isExpiredToken`, `setOAuthResolver`,
+  `getActiveOAuth`/`setActiveOAuth`.
+* Stored tokens are compatible — same default `storageKey`, same format.
+
 #### Use Oauth functions (Optional)
 
 ```typescript
