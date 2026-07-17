@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { createOAuth } from './module'
-import type { OAuthInstance } from './types'
+import { createOAuth, registerOAuthCleanup } from './test-utils'
+
+registerOAuthCleanup()
+
+import type { OAuth } from './types'
 
 const request = (url: string) =>
   ({
@@ -9,7 +12,7 @@ const request = (url: string) =>
   }) as any
 
 describe('http interceptors', () => {
-  let oauth: OAuthInstance
+  let oauth: OAuth
   let refresh: jest.Mock
 
   beforeEach(() => {

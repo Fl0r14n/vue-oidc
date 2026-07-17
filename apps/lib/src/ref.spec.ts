@@ -34,6 +34,13 @@ describe('storageRef', () => {
     expect(JSON.parse(store.get('static.token') || 'null')).toEqual({ access_token: 'a' })
   })
 
+  it('persists synchronously — a navigation right after the write must not lose it', () => {
+    const model = storageRef<any>('sync.token', {})
+    model.value = { redirect_uri: 'https://app/cb', code_verifier: 'v' }
+    // no tick: location.replace() follows the write immediately in the authorize/logout flows
+    expect(JSON.parse(store.get('sync.token') || 'null')).toEqual({ redirect_uri: 'https://app/cb', code_verifier: 'v' })
+  })
+
   it('reads the stored value when the key changes', async () => {
     store.set('site.token', JSON.stringify({ access_token: 'site' }))
     const key = ref('token')

@@ -152,7 +152,7 @@ export interface OAuthFunctions {
   introspect: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<IntrospectInfo | undefined>
 }
 
-export interface OAuthInstance {
+export interface OAuth {
   install: (app: App) => void
   /** stops this instance's watchers and clears the active pointer if it points here */
   dispose: () => void
@@ -160,7 +160,9 @@ export interface OAuthInstance {
   /** the provider/endpoint part of the config (`config.value.config`) */
   typeConfig: WritableComputedRef<Partial<OAuthTypeConfig> | undefined>
   storageKey: WritableComputedRef<string>
-  ignoredPaths: ComputedRef<RegExp[] | undefined>
+  /** register a path the authorization interceptor must skip — idempotent; read the registered
+   * patterns via `config.value.ignorePaths` */
+  ignorePath: (pattern: RegExp) => void
   functions: OAuthFunctions
   http: AxiosInstance
   token: Ref<OAuthToken>
@@ -173,7 +175,7 @@ export interface OAuthInstance {
   error: ComputedRef<string | undefined>
   hasError: ComputedRef<boolean>
   errorDescription: ComputedRef<string | undefined>
-  login: (parameters?: OAuthParameters) => Promise<void>
+  login: (parameters?: OAuthParameters) => Promise<string | undefined>
   logout: (logoutRedirectUri?: string, state?: string) => Promise<void>
   oauthCallback: (url?: string | URL) => Promise<void>
   checkToken: () => Promise<void>
@@ -181,6 +183,3 @@ export interface OAuthInstance {
   authorizationInterceptor: (req: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig>
   unauthorizedInterceptor: (error: any) => Promise<never>
 }
-
-/** @deprecated use {@link OAuthInstance} */
-export type OAuth = OAuthInstance

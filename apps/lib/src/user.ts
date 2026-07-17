@@ -24,14 +24,20 @@ export const createUser = (
     { immediate: true }
   )
 
-  watch([isAuthorized, () => (config.value as any)?.userPath], async ([authorized, userPath]) => {
-    if (authorized && userPath) {
-      const usr = await functions.userInfo(config.value, http)
-      if (usr) {
-        user.value = usr
+  // immediate: with a valid stored token and a statically configured userPath both sources are
+  // already truthy at instance creation and never change — without it the fetch never fires
+  watch(
+    [isAuthorized, () => (config.value as any)?.userPath],
+    async ([authorized, userPath]) => {
+      if (authorized && userPath) {
+        const usr = await functions.userInfo(config.value, http)
+        if (usr) {
+          user.value = usr
+        }
       }
-    }
-  })
+    },
+    { immediate: true }
+  )
 
   return { user }
 }

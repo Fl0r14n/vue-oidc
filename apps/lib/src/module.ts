@@ -1,34 +1,50 @@
-import { type App, effectScope, getCurrentInstance, type InjectionKey, inject } from 'vue'
+import { type App, effectScope, hasInjectionContext, type InjectionKey, inject } from 'vue'
 import { createConfig } from './config'
 import { defaultOAuthFunctions } from './functions'
 import { createHttp } from './http'
 import { createJwt } from './jwt'
 import { createFlows } from './oauth'
 import { createToken, isExpiredToken } from './token'
-import type { OAuthConfig, OAuthInstance } from './types'
+import type { OAuth, OAuthConfig } from './types'
 import { createUser } from './user'
 
-export const oauthKey: InjectionKey<OAuthInstance> = Symbol('vue-oidc')
+export const oauthKey: InjectionKey<OAuth> = Symbol('vue-oidc')
 
-// pointer to the last created/installed instance so composables work outside setup (guards, stores)
-let activeOAuth: OAuthInstance | undefined
-export const setActiveOAuth = (instance?: OAuthInstance) => (activeOAuth = instance)
+// pointer to the last created/installed instance so composables work outside any injection context
+// (the same shape as pinia's activePinia / vue-router's install-provided key)
+let activeOAuth: OAuth | undefined
 
-// SSR servers with a per-request context (e.g. AsyncLocalStorage) resolve the request's instance here,
-// so concurrent renders can't read each other's instance
-let resolveOAuth: (() => OAuthInstance | undefined) | undefined
-export const setOAuthResolver = (resolver?: () => OAuthInstance | undefined) => (resolveOAuth = resolver)
+// instances alive right now (created and not disposed) — >1 means concurrent apps, where the
+// module pointer is ambiguous
+let aliveInstances = 0
 
-export const getActiveOAuth = (): OAuthInstance => {
-  const instance = (getCurrentInstance() && inject(oauthKey, undefined)) || resolveOAuth?.() || activeOAuth
+const pointerFallback = () => {
+  // the pointer is only wrong when ambiguous: on the server with several instances alive
+  // (concurrent SSR) it could hand out another request's instance — fail loud. On the client
+  // the last-installed instance stays the deliberate answer.
+  if (activeOAuth && aliveInstances > 1 && typeof window === 'undefined') {
+    throw new Error(
+      '[vue-oidc]: ambiguous OAuth instance: multiple instances are alive on the server. Resolve inside an injection context (component/store setup, navigation guard, app.runWithContext).'
+    )
+  }
+  return activeOAuth
+}
+
+export const getActiveOAuth = (): OAuth => {
+  // hasInjectionContext, not getCurrentInstance: inject() also resolves inside pinia store setups
+  // and vue-router navigation guards, which run under the app's runWithContext without a component
+  // instance — exactly the places a per-request SSR app needs per-app resolution
+  const instance = (hasInjectionContext() && inject(oauthKey, undefined)) || pointerFallback()
   if (!instance) {
     throw new Error('[vue-oidc]: no active OAuth instance. Call createOAuth() and install it with app.use() first.')
   }
   return instance
 }
 
-export const createOAuth = (cfg?: OAuthConfig): OAuthInstance => {
+export const createOAuth = (cfg?: OAuthConfig): OAuth => {
   const scope = effectScope(true)
+  let disposed = false
+  aliveInstances++
   const instance = scope.run(() => {
     const configContext = createConfig(cfg)
     const functions = { ...defaultOAuthFunctions, ...cfg?.functions }
@@ -37,29 +53,33 @@ export const createOAuth = (cfg?: OAuthConfig): OAuthInstance => {
     const httpContext = createHttp(configContext, tokenContext)
     const flows = createFlows(configContext, tokenContext, functions, jwt)
     const { user } = createUser(configContext, tokenContext, httpContext, functions, jwt)
-    const { oauthConfig, config, ignoredPaths, storageKey } = configContext
+    const { oauthConfig, config, ignorePath, storageKey } = configContext
     const { token, type, accessToken, status, isAuthorized, error, hasError, errorDescription, autoconfigOauth, checkToken } = tokenContext
     const { http, authorizationInterceptor, unauthorizedInterceptor } = httpContext
     const { state, login, logout, oauthCallback } = flows
-    const oauth: OAuthInstance = {
+    const oauth: OAuth = {
       install: (app: App) => {
         app.provide(oauthKey, oauth)
         app.provide('http', http)
         app.provide('login', login)
         app.provide('logout', logout)
         app.provide('oauth-callback', oauthCallback)
-        setActiveOAuth(oauth)
+        activeOAuth = oauth
       },
       dispose: () => {
+        if (!disposed) {
+          disposed = true
+          aliveInstances--
+        }
         scope.stop()
         if (activeOAuth === oauth) {
-          setActiveOAuth(undefined)
+          activeOAuth = undefined
         }
       },
       config: oauthConfig,
       typeConfig: config,
       storageKey,
-      ignoredPaths,
+      ignorePath,
       functions,
       http,
       token,
@@ -81,8 +101,8 @@ export const createOAuth = (cfg?: OAuthConfig): OAuthInstance => {
       unauthorizedInterceptor
     }
     return oauth
-  }) as OAuthInstance
-  setActiveOAuth(instance)
+  }) as OAuth
+  activeOAuth = instance
   return instance
 }
 
@@ -102,7 +122,7 @@ export const useOAuth = () => {
   const {
     typeConfig,
     storageKey,
-    ignoredPaths,
+    ignorePath,
     type,
     accessToken,
     status,
@@ -119,7 +139,7 @@ export const useOAuth = () => {
   return {
     config: typeConfig,
     storageKey,
-    ignoredPaths,
+    ignorePath,
     type,
     accessToken,
     status,

@@ -5,15 +5,19 @@ import type { OpenIdConfig } from './types'
 
 const parseJwt = (idToken?: string) => {
   const payload = idToken?.split('.')[1]
-  return payload
-    ? JSON.parse(
-        decodeURIComponent(
-          Array.from(atob(payload))
-            .map(c => `%${(`00${c.charCodeAt(0).toString(16)}`).slice(-2)}`)
-            .join('')
-        )
-      )
-    : {}
+  if (!payload) return {}
+  // JWT segments are base64url (RFC 7515) — atob only accepts base64: map -_ back and re-pad
+  const base64 = payload
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .padEnd(Math.ceil(payload.length / 4) * 4, '=')
+  return JSON.parse(
+    decodeURIComponent(
+      Array.from(atob(base64))
+        .map(c => `%${(`00${c.charCodeAt(0).toString(16)}`).slice(-2)}`)
+        .join('')
+    )
+  )
 }
 
 export const createJwt = ({ config, strictJwt }: Pick<ConfigContext, 'config' | 'strictJwt'>) => {

@@ -33,7 +33,9 @@ app.use(oauth)
 router.addRoute({
   path: '/oauth_callback',
   name: 'oauthCallback',
-  component: () => null as any,
+  // a real (empty) component — a `() => null` lazy loader crashes the router's component
+  // resolution when the route actually renders (e.g. an SSR pass)
+  component: { render: () => null },
   beforeEnter: oauthCallbackGuard
 })
 ```
@@ -62,7 +64,7 @@ const oauth = useOAuth()
 * other miscellaneous stores: `useOAuthConfig()`, `useOAuthToken()`, `useOAuthUser()`, `useOAuthHttp()`
   and `useOAuthInterceptors()`
 
-The composables resolve the current `OAuthInstance` — via `inject(oauthKey)` inside component setup, and via
+The composables resolve the current `OAuth` instance — via `inject(oauthKey)` inside component setup, and via
 the last created/installed instance elsewhere (router guards, pinia stores). You can also hold on to the
 instance returned by `createOAuth()` directly; it exposes everything the composables do
 (`token`, `user`, `status`, `login`, `checkToken`, `http`, ...).
@@ -92,28 +94,26 @@ const oauth = createOAuth({
 Create and install **one instance per request** — instances are fully isolated (token, config, watchers).
 `dispose()` stops an instance's watchers when the render is done.
 
-If your server keeps a per-request context (e.g. `AsyncLocalStorage`), register a resolver so composables
-called outside setup resolve the *request's* instance even when concurrent renders interleave:
+Composables resolve the instance through Vue's injection context (`app.use(oauth)` provides it):
+component setup, pinia store setups and vue-router navigation guards all run inside the app's
+context, so they always answer with the *request's* instance. Outside any injection context the
+module-level pointer (last created/installed instance) answers — on the server this **throws**
+when several instances are alive, because a global answer could belong to another request:
 
 ```typescript
-// entry-server.ts
-import { createOAuth, setOAuthResolver, type OAuthInstance } from 'vue-oidc'
-
-const als = new AsyncLocalStorage<{ oauth?: OAuthInstance }>()
-setOAuthResolver(() => als.getStore()?.oauth) // once per process
-
-// per request:
-als.run({}, async () => {
-  const oauth = createOAuth({ config: {...} })
-  als.getStore()!.oauth = oauth
-  app.use(oauth)
-  try {
-    return await renderToString(app)
-  } finally {
-    oauth.dispose()
-  }
-})
+// entry-server.ts — per request:
+const oauth = createOAuth({ config: {...} })
+app.use(oauth)
+try {
+  return await renderToString(app)
+} finally {
+  app.runWithContext(() => getActiveOAuth()).dispose()
+}
 ```
+
+`oauthCallback()` no-ops on the server: the `code_verifier` lives in the browser's storage, and a
+server-side exchange without it would still burn the single-use authorization code at the IDP —
+the client's own exchange would then fail with `invalid_grant`. Callback guards need no SSR check.
 
 The library itself never imports `node:async_hooks` — it stays runtime-agnostic.
 
@@ -122,9 +122,14 @@ The library itself never imports `node:async_hooks` — it stays runtime-agnosti
 * State moved from module scope onto the instance: multiple isolated instances are now possible and
   SSR-safe. The composable API (`useOAuth()`, `useOAuthToken()`, ...) is unchanged.
 * Overriding behavior by mutating `useOAuthFunctions()` → pass `functions` to `createOAuth()` instead.
-* `OAuth` type → `OAuthInstance` (deprecated alias kept).
-* New exports: `oauthKey`, `defaultOAuthFunctions`, `isExpiredToken`, `setOAuthResolver`,
-  `getActiveOAuth`/`setActiveOAuth`.
+* the instance type is `OAuth` (v4's `OAuthInstance` name is gone).
+* New exports: `oauthKey`, `defaultOAuthFunctions`, `isExpiredToken`, `getActiveOAuth`.
+* v4's `setOAuthResolver`/`setActiveOAuth` are gone — injection-context resolution covers guards and
+  store setups, and ambiguous server-side pointer reads throw instead of guessing.
+* the `ignoredPaths` computed is gone: register interceptor exclusions with the idempotent
+  `ignorePath(pattern)`, read them via `config.value.ignorePaths`.
+* `login()` resolves to the authorization url for the authorization-code flow — an SSR host can
+  302 to it; on the client the navigation already happened.
 * Stored tokens are compatible — same default `storageKey`, same format.
 
 #### Use Oauth functions (Optional)
@@ -239,7 +244,7 @@ bun i vue-oidc --save
 ## App Requirements
 
 * vue3
-* vuetify/vue-18n if using the `OAuth` component
+* vuetify/vue-i18n if using the `OAuth` component
 
 #### Licensing
 

@@ -35,7 +35,6 @@ export const createApp = () => {
       pkce: VITE_OAUTH_PKCE && JSON.parse(VITE_OAUTH_PKCE)
     }
   })
-  console.log(oauth.config.value)
   const router = app.getRouter()
   router.beforeEach(to => {
     const resolve = router.resolve(to)
@@ -51,12 +50,12 @@ export const createApp = () => {
   router.addRoute({
     path: '/oauth_callback',
     name: 'oauthCallback',
-    component: () => null as any,
+    component: { render: () => null },
     beforeEnter: oauthCallbackGuard
   })
   router.addRoute({
     path: '/:catchAll(.*)',
-    redirect: '/main'
+    redirect: { name: 'main' }
   })
   app.use(oauth).use(
     createVuetify({

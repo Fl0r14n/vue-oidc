@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { createOAuth } from './module'
-import type { OAuthInstance } from './types'
+import { createOAuth, registerOAuthCleanup } from './test-utils'
+
+registerOAuthCleanup()
+
+import type { OAuth } from './types'
 import { OAuthStatus, OAuthType } from './types'
 
 describe('checkToken', () => {
-  let oauth: OAuthInstance
+  let oauth: OAuth
   let refresh: jest.Mock
 
   beforeEach(() => {

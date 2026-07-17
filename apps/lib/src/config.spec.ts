@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
 import { defaultOAuthFunctions } from './functions'
-import { createOAuth } from './module'
+import { createOAuth, registerOAuthCleanup } from './test-utils'
+
+registerOAuthCleanup()
 
 describe('config', () => {
   beforeEach(() => {
@@ -11,7 +13,7 @@ describe('config', () => {
     const oauth = createOAuth()
 
     expect(oauth.storageKey.value).toBe('token')
-    expect(oauth.ignoredPaths.value).toEqual([])
+    expect(oauth.config.value.ignorePaths).toEqual([])
     expect(oauth.config.value.strictJwt).toBe(true)
   })
 
@@ -41,6 +43,16 @@ describe('config', () => {
 
     expect(oauth.functions.refresh).toBe(refresh)
     expect(oauth.functions.revoke).toBe(defaultOAuthFunctions.revoke)
+  })
+
+  it('ignorePath registers interceptor exclusions idempotently', () => {
+    const oauth = createOAuth()
+
+    oauth.ignorePath(/\/authorizationserver/)
+    oauth.ignorePath(/\/authorizationserver/) // factories may run more than once
+    oauth.ignorePath(/\/other/)
+
+    expect(oauth.config.value.ignorePaths?.map(p => p.source)).toEqual(['\\/authorizationserver', '\\/other'])
   })
 
   it('keeps config isolated between instances', () => {

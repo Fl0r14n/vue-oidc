@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { createOAuth } from './module'
-import type { OAuthInstance } from './types'
+import { createOAuth, registerOAuthCleanup } from './test-utils'
+
+registerOAuthCleanup()
+
+import type { OAuth } from './types'
 import { OAuthType } from './types'
 
 ;(globalThis as any).crypto = {
@@ -19,9 +22,11 @@ const mockLocation = {
   search: ''
 }
 ;(globalThis as any).location = mockLocation
+// oauthCallback no-ops without a window (server render must not burn the code) — bun has none
+;(globalThis as any).window = globalThis
 
 describe('oauth', () => {
-  let oauth: OAuthInstance
+  let oauth: OAuth
   let functions: {
     resourceOwnerLogin: jest.Mock
     clientCredentialLogin: jest.Mock
@@ -79,12 +84,17 @@ describe('oauth', () => {
         state: 'random-state'
       }
 
-      await oauth.login(params)
+      const url = await oauth.login(params)
 
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('https://auth.com/authorize?client_id=client123'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('redirect_uri=https%3A%2F%2Fapp.com%2Fcallback'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('response_type=code'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('state=random-state'))
+      // the url is also returned so an SSR host (no location) can answer with a 302
+      expect(url).toBe((mockLocation.replace as any).mock.calls.at(-1)[0])
+      // redirect_uri, nonce and code_verifier land in one token write
+      expect(oauth.token.value.redirect_uri).toBe('https://app.com/callback')
+      expect(oauth.token.value.nonce).toBeDefined()
     })
 
     it('should handle PKCE if enabled', async () => {
@@ -126,11 +136,26 @@ describe('oauth', () => {
 
       await oauth.logout('https://app.com/home', 'logout-state')
 
-      expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('https://auth.com/logout?client_id=client123'))
-      expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('post_logout_redirect_uri=https://app.com/home'))
+      expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('https://auth.com/logout?'))
+      expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('client_id=client123'))
+      expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('post_logout_redirect_uri=https%3A%2F%2Fapp.com%2Fhome'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('id_token_hint=id-token-hint'))
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('state=logout-state'))
       expect(oauth.token.value).toEqual({})
+    })
+
+    it('should keep a redirect URI with its own query intact (encoded)', async () => {
+      oauth.typeConfig.value = {
+        logoutPath: 'https://auth.com/logout',
+        clientId: 'client123'
+      }
+
+      await oauth.logout('https://app.com/cb?returnUrl=/checkout&lang=de')
+
+      const url: string = (mockLocation.replace as any).mock.calls.at(-1)[0]
+      // the redirect uri's own &/= must not leak into the logout url as separate params
+      expect(new URL(url).searchParams.get('post_logout_redirect_uri')).toBe('https://app.com/cb?returnUrl=/checkout&lang=de')
+      expect(new URL(url).searchParams.get('lang')).toBeNull()
     })
   })
 
@@ -146,6 +171,17 @@ describe('oauth', () => {
         type: OAuthType.IMPLICIT
       })
       expect(oauth.state.value).toBe('s123')
+    })
+
+    it('does not exchange on the server — a burned code would fail the client retry', async () => {
+      const win = (globalThis as any).window
+      delete (globalThis as any).window
+      try {
+        await oauth.oauthCallback('app:/oauth_callback?code=c123&state=s456')
+        expect(functions.authorize).not.toHaveBeenCalled()
+      } finally {
+        ;(globalThis as any).window = win
+      }
     })
 
     it('should handle authorization code redirect (search)', async () => {

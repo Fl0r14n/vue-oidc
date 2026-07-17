@@ -38,26 +38,38 @@ bun --filter vue-oidc-client dev  # start app dev server (Vite, port 3000)
 
 ### Architecture (v4, instance-based)
 
-- All state lives on an `OAuthInstance` built by `createOAuth()` — no module-level state except the
+- All state lives on an `OAuth` instance built by `createOAuth()` — no module-level state except the
   active-instance pointer. Each source file exports a factory (`createConfig`, `createToken`, `createHttp`,
   `createFlows`, `createUser`, `createJwt`); `module.ts` composes them inside a detached `effectScope`
   (`dispose()` stops all watchers). Factories bind their dependencies via closures at construction —
   never resolve state through the active pointer inside library internals, that reintroduces the
   cross-request race under SSR.
-- Composable resolution order (`getActiveOAuth`): `inject(oauthKey)` during component setup →
-  `setOAuthResolver` hook → module pointer (set by `createOAuth` and `install`). The pointer exists so
-  composables work in router guards/stores where Vue has no injection context.
-- SSR: one `createOAuth()` + `app.use()` per request. Servers with a per-request context
-  (AsyncLocalStorage) should stash the instance there and register `setOAuthResolver` so concurrent
-  renders can't read each other's instance. The lib never imports `node:async_hooks`.
+- Composable resolution order (`getActiveOAuth`): `inject(oauthKey)` whenever an injection context
+  exists (`hasInjectionContext` — component setup, pinia store setup, vue-router navigation guards,
+  anything under `app.runWithContext`) → module pointer (set by `createOAuth` and `install`, the
+  same shape as pinia's `activePinia`). The pointer only serves calls outside any injection
+  context; on the server it **throws** when hit while multiple instances are alive — a
+  concurrent-SSR answer from a global pointer could belong to another request, so ambiguity fails
+  loud instead of guessing. On the client the last-installed instance stays the answer.
+- SSR: one `createOAuth()` + `app.use()` per request; dispose it when the render ends
+  (`app.runWithContext(() => getActiveOAuth()).dispose()`). Injection-context resolution covers
+  guards and store setups — no per-request resolver mechanism exists or is needed. The lib never
+  imports `node:async_hooks`.
 - Behavior overrides are constructor input: `createOAuth({ functions: { refresh } })` merges over
   `defaultOAuthFunctions`. Never mutate a shared functions object.
 
 ### Test gotcha
 
-`ref.spec.ts` installs a `globalThis.localStorage` mock at module load and bun itself ships a real,
-process-persistent `localStorage` — either way state leaks across spec files. Any spec that creates
-instances must run `globalThis.localStorage?.clear()` in `beforeEach`.
+bun test provides **no** `localStorage` — a spec that needs storage must install its own
+module-load mock (see `ref.spec.ts`/`user.spec.ts`); relying on another file's mock leaking in
+makes the test depend on file load order. Mocks are process-shared once installed, so any spec
+that creates instances must run `globalThis.localStorage?.clear()` in `beforeEach`.
+
+Specs must also dispose every instance they create: bun runs all spec files in one process and the
+alive-instance count drives the server-side ambiguity error in `getActiveOAuth`. Use the tracked
+factory from `test-utils.ts` (`import { createOAuth, registerOAuthCleanup } from './test-utils'` +
+`registerOAuthCleanup()` at file top — the helper is module-cached, so the afterEach must be
+registered per file).
 
 ## App (`apps/app`)
 

@@ -18,7 +18,15 @@ export const createConfig = (cfg?: OAuthConfig) => {
       } as OAuthTypeConfig)
   })
 
-  const ignoredPaths = computed(() => oauthConfig.value.ignorePaths)
+  const ignorePath = (pattern: RegExp) => {
+    oauthConfig.value.ignorePaths ??= []
+    const paths = oauthConfig.value.ignorePaths
+    if (!paths.some(p => p.source === pattern.source && p.flags === pattern.flags)) {
+      paths.push(pattern)
+    }
+  }
+
+  const isPathIgnored = (url?: string) => (!!url && oauthConfig.value.ignorePaths?.some(pattern => pattern.test(url))) || false
 
   const storageKey = computed({
     get: () => oauthConfig.value.storageKey || 'token',
@@ -30,7 +38,8 @@ export const createConfig = (cfg?: OAuthConfig) => {
   return {
     oauthConfig,
     config,
-    ignoredPaths,
+    ignorePath,
+    isPathIgnored,
     storageKey,
     strictJwt
   }

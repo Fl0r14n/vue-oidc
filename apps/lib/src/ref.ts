@@ -11,7 +11,10 @@ const set = (key: string, value: any) => {
 
 export const storageRef = <T>(key: MaybeRefOrGetter<string>, initial?: T, map?: (v: any) => T): Ref<T> => {
   const model = ref<T>(map?.(initial) || (initial as T))
-  // restart the model watcher per key so a read never writes and a stale watcher can't write to the old key
+  // restart the model watcher per key so a read never writes and a stale watcher can't write to the old key.
+  // both watchers flush sync — determinism, not a race fix: writes are often immediately followed
+  // by a navigation (authorize/logout redirect), and persisting at write time makes that safe by
+  // construction instead of by scheduler/unload timing arguments
   let stop: WatchHandle | undefined
   watch(
     () => toValue(key),
@@ -21,13 +24,13 @@ export const storageRef = <T>(key: MaybeRefOrGetter<string>, initial?: T, map?: 
       model.value = map?.(v || initial) || v || initial
       stop = watch(
         model,
-        async m => {
+        m => {
           set(k, m)
         },
-        { deep: true }
+        { deep: true, flush: 'sync' }
       )
     },
-    { immediate: true }
+    { immediate: true, flush: 'sync' }
   )
   return model as Ref<T>
 }

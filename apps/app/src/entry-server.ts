@@ -1,4 +1,5 @@
 import { renderToString } from 'vue/server-renderer'
+import { getActiveOAuth } from 'vue-oidc'
 import { createApp } from './main'
 
 const getURL = (req: any) => {
@@ -12,42 +13,21 @@ const getURL = (req: any) => {
   return new URL(href)
 }
 
-const mockLocation = (req?: any): Location => {
-  const { href, origin, protocol, host, hostname, port, pathname, search, hash } = getURL(req)
-  return {
-    href,
-    origin,
-    protocol,
-    host,
-    hostname,
-    port,
-    pathname,
-    search,
-    hash,
-    reload() {},
-    assign() {},
-    ancestorOrigins: {} as any,
-    replace() {}
-  }
-}
-
-const setSSRLocation = (req?: any) => {
-  if (import.meta.env.SSR && req) {
-    globalThis.location = mockLocation(req)
-  }
-}
-
 export const render = async (req: any, manifest: any) => {
-  setSSRLocation(req)
+  const url = getURL(req)
   const app = createApp()
-  const router = app.getRouter()
-  await router.push(`${globalThis.location.pathname}${globalThis.location.search}`)
-  await router.isReady()
-  const ctx: any = {}
-  const body = await renderToString(app, ctx)
-  const head = renderPreloadLinks(ctx.modules, manifest)
-  const state = app.getState()
-  return { body, head, state: `var state = ${JSON.stringify(state)}` }
+  try {
+    const router = app.getRouter()
+    await router.push(`${url.pathname}${url.search}`)
+    await router.isReady()
+    const ctx: any = {}
+    const body = await renderToString(app, ctx)
+    const head = renderPreloadLinks(ctx.modules, manifest)
+    const state = app.getState()
+    return { body, head, state: `var state = ${JSON.stringify(state)}` }
+  } finally {
+    app.runWithContext(() => getActiveOAuth()).dispose()
+  }
 }
 
 const basename = (path: string): string => path.split(/[\\/]/).pop() || ''

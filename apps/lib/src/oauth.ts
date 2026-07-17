@@ -31,21 +31,19 @@ const parseOauthUri = (hash: string) => {
   return (Object.keys(params).length && params) || {}
 }
 
+const generateNonce = (scope: string) => (scope.indexOf('openid') > -1 ? randomString() : undefined)
+
+const generatePkcePair = async () => {
+  const code_verifier = randomString()
+  return { code_verifier, code_challenge: await pkce(code_verifier) }
+}
+
 export const createFlows = (
   { config }: Pick<ConfigContext, 'config'>,
   { token, autoconfigOauth }: Pick<TokenContext, 'token' | 'autoconfigOauth'>,
   functions: OAuthFunctions,
   jwt: Jwt
 ) => {
-  const generateNonce = (scope: string) => {
-    if (scope.indexOf('openid') > -1) {
-      const nonce = randomString()
-      token.value = { ...token.value, nonce }
-      return `&nonce=${nonce}`
-    }
-    return ''
-  }
-
   const checkNonce = async (parameters: Record<string, string>) => {
     if (parameters.error) return parameters
     const payload = await jwt(parameters.id_token)
@@ -55,30 +53,37 @@ export const createFlows = (
     return parameters
   }
 
-  const generateCodeChallenge = async (doPkce: any) => {
-    if (doPkce) {
-      const code_verifier = randomString()
-      token.value = { ...token.value, code_verifier }
-      return `&code_challenge=${await pkce(code_verifier)}&code_challenge_method=S256`
-    }
-    return ''
-  }
-
   const toAuthorizationUrl = async (parameters: AuthorizationCodeParameters) => {
-    const { authorizePath, clientId, scope = '', pkce } = config.value as any
-    let authorizationUrl = `${authorizePath}`
-    authorizationUrl += (authorizePath.includes('?') && '&') || '?'
-    authorizationUrl += `client_id=${clientId}`
-    token.value = { ...token.value, redirect_uri: parameters.redirectUri }
+    const { authorizePath, clientId, scope = '', pkce: usePkce } = config.value as any
+    const nonce = generateNonce(scope)
+    const pkcePair = usePkce ? await generatePkcePair() : undefined
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: parameters.redirectUri,
+      response_type: parameters.responseType,
+      scope,
+      state: parameters.state || ''
+    })
     if (parameters.accessType) {
-      authorizationUrl += `&access_type=${parameters.accessType}`
-      authorizationUrl += `&prompt=${parameters.prompt || ''}`
+      params.set('access_type', parameters.accessType)
+      params.set('prompt', parameters.prompt || '')
     }
-    authorizationUrl += `&redirect_uri=${encodeURIComponent(parameters.redirectUri)}`
-    authorizationUrl += `&response_type=${parameters.responseType}`
-    authorizationUrl += `&scope=${encodeURIComponent(scope)}`
-    authorizationUrl += `&state=${encodeURIComponent(parameters.state || '')}`
-    return globalThis.location?.replace(`${authorizationUrl}${generateNonce(scope)}${await generateCodeChallenge(pkce)}`)
+    if (nonce) {
+      params.set('nonce', nonce)
+    }
+    if (pkcePair) {
+      params.set('code_challenge', pkcePair.code_challenge)
+      params.set('code_challenge_method', 'S256')
+    }
+    token.value = {
+      ...token.value,
+      redirect_uri: parameters.redirectUri,
+      ...(nonce && { nonce }),
+      ...(pkcePair && { code_verifier: pkcePair.code_verifier })
+    }
+    const url = `${authorizePath}${authorizePath.includes('?') ? '&' : '?'}${params}`
+    globalThis.location?.replace(url)
+    return url
   }
 
   const checkCode = async () => {
@@ -99,7 +104,7 @@ export const createFlows = (
       (parameters as AuthorizationCodeParameters).redirectUri &&
       (parameters as AuthorizationCodeParameters).responseType
     ) {
-      await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
+      return await toAuthorizationUrl(parameters as AuthorizationCodeParameters)
     } else {
       token.value = (await functions.clientCredentialLogin(config.value as ClientCredentialConfig)) || {}
     }
@@ -111,11 +116,18 @@ export const createFlows = (
     const returnUri = logoutRedirectUri || configLogoutRedirectUri
     if (returnUri && logoutPath) {
       const { id_token } = token.value
-      const tokenHint = (id_token && `&id_token_hint=${id_token}`) || ''
-      const stateFwd = (state && `&state=${state}`) || ''
-      const logoutUrl = `${logoutPath}?client_id=${clientId}&post_logout_redirect_uri=${returnUri}${tokenHint}${stateFwd}`
+      const params = new URLSearchParams({ post_logout_redirect_uri: returnUri })
+      if (clientId) {
+        params.set('client_id', clientId)
+      }
+      if (id_token) {
+        params.set('id_token_hint', id_token)
+      }
+      if (state) {
+        params.set('state', state)
+      }
       token.value = {}
-      globalThis.location?.replace(logoutUrl)
+      globalThis.location?.replace(`${logoutPath}${logoutPath.includes('?') ? '&' : '?'}${params}`)
     } else {
       await functions.revoke(token.value, config.value)
       token.value = {}
@@ -123,6 +135,8 @@ export const createFlows = (
   }
 
   const oauthCallback = async (url?: string | URL) => {
+    // do not run in SSR, verifiers sit in users browser storage
+    if (typeof window === 'undefined') return
     const path = (url && new URL(url)) || globalThis.location || {}
     const { hash, search } = path
     const isImplicitRedirect = hash && /(access_token=)|(error=)/.test(hash)

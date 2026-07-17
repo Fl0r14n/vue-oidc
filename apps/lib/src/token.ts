@@ -79,7 +79,7 @@ export const createToken = ({ config, storageKey }: Pick<ConfigContext, 'config'
             // RFC 6749 §5.2 error (e.g. invalid_grant) — persist it like the 401 interceptor so the dead token is dropped
             token.value = refreshed
           } else {
-            //keep the refresh token cuz we might not get a new one
+            // keep the old refresh token — the response may not include a new one
             setExpires({ refresh_token: t.refresh_token, ...refreshed })
           }
         }
