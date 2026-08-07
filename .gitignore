@@ -10,3 +10,4 @@ output.css
 bun.lock
 .claude
 .idea
+.env.production

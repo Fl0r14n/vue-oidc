@@ -15,7 +15,7 @@ const { BASE_URL, SSR } = import.meta.env
 const _getComponent = (ctx: AppContext, name: string, uid?: string) =>
   (uid && ctx.components[`${name}-${uid}`]) ||
   ctx.components[name] ||
-  console.warn(`CMS component identified by name: ${name} and/or uid: ${uid} was not found`)
+  console.warn(`Component identified by name: ${name} and/or uid: ${uid} was not found`)
 
 export const bootstrapApp = (comp: Component, ctx?: Record<string, unknown> | null) => {
   const app = import.meta.env.SSR ? createSSRApp(comp, ctx) : createApp(comp, ctx)

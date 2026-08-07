@@ -61,6 +61,7 @@
     "@tsdown/css": "latest",
     "@types/bun": "latest",
     "tsdown": "latest",
+    "typescript": "^6",
     "unplugin-vue": "latest",
     "vue": "latest",
     "vue-tsc": "latest"

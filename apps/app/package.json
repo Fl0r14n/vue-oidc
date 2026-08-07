@@ -24,7 +24,7 @@
   "devDependencies": {
     "vite": "latest",
     "vitest": "latest",
-    "typescript": "latest",
+    "typescript": "^6",
     "vite-plugin-vue-devtools": "latest",
     "vite-plugin-vuetify": "latest",
     "@vitejs/plugin-vue": "latest",

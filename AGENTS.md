@@ -28,6 +28,13 @@ bun --filter vue-oidc test      # run lib tests
 bun --filter vue-oidc-client dev  # start app dev server (Vite, port 3000)
 ```
 
+## Dependencies
+
+Deps are declared as `latest` and bumped with `bun update --latest --filter '*'`. One exception:
+`typescript` is pinned to `^6` in both packages. TypeScript 7 (the Go compiler) is on the `latest`
+npm tag, but `vue-tsc` still requires `typescript/lib/tsc` and `rolldown-plugin-dts` crashes in
+`createVueLanguage` against it. Unpin only after both support TS 7.
+
 ## Library (`apps/lib`)
 
 - **Build**: `tsdown` → ESM output to `dist/`, generates `.d.mts` types
