@@ -51,7 +51,11 @@ Three separate builds, each with its own externals:
 
 - `index` — the library. Transport is `fetch`; **nothing in its graph may import axios**, or the optional
   peer becomes required for every consumer.
-- `axios` — the optional adapter (`src/axios/index.ts`). The **only** file that may import axios.
+- `axios` — the optional adapter (`src/axios/index.ts`). The **only** file that may import axios. It
+  composes rather than configures: `createAxiosOAuth()` wraps `createOAuth()` and provides one client per
+  instance under `httpKey`. Never add a `createOAuth(cfg, withAxios)`-style flag — that puts an axios
+  branch in the core entry and the separate build stops meaning anything. The client is built *with* the
+  instance, not cached against it, so there is no registry and no way to reach another request's client.
 - `component` — the optional vuetify UI. Keeps vuetify/`@mdi` out of an app that only wants composables.
 
 The two optional entries import the root **by package name** (`from 'vue-oidc'`), never relatively, so the

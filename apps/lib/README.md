@@ -108,16 +108,29 @@ itself has no HTTP client in its graph. Install it if you want it:
 bun i axios --save
 ```
 
+Build the instance with `createAxiosOAuth` instead of `createOAuth` — same config, plus one axios client
+for the instance:
+
+```typescript
+import { createAxiosOAuth } from 'vue-oidc/axios'
+
+const oauth = createAxiosOAuth({ config: { issuerPath: '...', clientId: '...' } }, { baseURL: '/api' })
+app.use(oauth)
+
+oauth.http // the client, also provided to the app
+```
+
+Anywhere in the app, resolve it like any other composable:
+
 ```typescript
 import { useOAuthHttp } from 'vue-oidc/axios'
 
-// an axios instance with both interceptors attached
 const http = useOAuthHttp()
-const { data } = await http.get('/api/orders')
+const { data } = await http.get('/orders')
 ```
 
-The client is memoized **per `OAuth` instance**, so every call site gets the same one and interceptors you
-add in a store are seen by callers everywhere else:
+There is exactly **one client per instance**, built alongside it, so interceptors you add in a store are
+seen by every other call site:
 
 ```typescript
 // somewhere at setup — adds a header to every authorized request in the app
@@ -128,28 +141,41 @@ useOAuthHttp().interceptors.request.use(req => {
 })
 ```
 
-Per instance rather than per module, because a module-level singleton would let two concurrent SSR renders
-cross interceptors. `useOAuthHttp()` takes no defaults for the same reason the memoization exists — with
-several call sites sharing the client, whichever ran first would silently decide them. Use
-`createAxiosClient(oauth, defaults)` when you want a separately configured client.
+One per instance rather than per module because a module-level singleton would let two concurrent SSR
+renders cross interceptors — and one *built with* the instance rather than cached against it, so there is
+no registry to consult and no way to reach another request's client. `createAxiosOAuth` is also the only
+place `defaults` can be honoured unambiguously: a client shared by many call sites cannot let whichever
+ran first decide its configuration.
 
-For a client you configure yourself, attach the pair instead:
+`useOAuthHttp()` throws if the instance was built with plain `createOAuth()` — inventing a client there
+would hand back one silently missing whatever interceptors the app attached to the real one.
+
+Already have an app-wide axios client — your own baseURL, timeout, retry logic? Authorize it with the
+interceptor pair instead. Attach **both**: the bearer without the 401 branch means a session the IdP
+invalidated behind your back is never noticed.
 
 ```typescript
 import axios from 'axios'
-import { useOAuthInterceptors } from 'vue-oidc/axios'
+import { axiosInterceptors } from 'vue-oidc/axios'
 
-const { authorizationInterceptor, unauthorizedInterceptor } = useOAuthInterceptors()
-const http = axios.create({ baseURL: '/api' })
+const oauth = createOAuth({ config: {...} })            // plain instance — no client of its own
+const { authorizationInterceptor, unauthorizedInterceptor } = axiosInterceptors(oauth)
+const http = axios.create({ baseURL: '/api', timeout: 10_000 })
 http.interceptors.request.use(authorizationInterceptor)
 http.interceptors.response.use(r => r, unauthorizedInterceptor)
 ```
 
-Outside any injection context — or under SSR, where the composables' pointer fallback is deliberately
-ambiguous — pass the instance explicitly: `createAxiosClient(oauth, defaults?)` and
-`createAxiosInterceptors(oauth)`. Build **one client per `OAuth` instance**, never a shared module-level
-default: on the server two concurrent requests sharing interceptors would mean one request's bearer on
-another request's call.
+`createAxiosClient(oauth, defaults?)` is the shorthand when you want a ready-made authorized client rather
+than to bring your own — a second one alongside `oauth.http`, say, for a different baseURL. Both take the
+instance explicitly, so neither needs an injection context.
+
+Build **one client per `OAuth` instance**, never a shared module-level default: on the server two
+concurrent requests sharing interceptors would mean one request's bearer on another request's call.
+
+The whole entry is four functions — `createAxiosOAuth` (wired), `useOAuthHttp` (resolve it),
+`createAxiosClient` (another one), `axiosInterceptors` (bring your own) — plus `httpKey` and the
+`AxiosOAuth` type. Only `useOAuthHttp` needs an injection context; the `create*` prefix marks the ones
+that build something stateful from what you hand them.
 
 #### Override oauth functions (Optional)
 
@@ -213,13 +239,17 @@ service.
 
 * `oauth.http` (axios instance) → `oauth.fetch` (`OAuthFetch`, the standard `fetch` signature), plus
   `oauth.authHeaders(url)` for the raw `Authorization` header.
-* `useOAuthHttp()` → `useOAuthFetch()`, **or** `bun add axios` and change the import to
-  `import { useOAuthHttp } from 'vue-oidc/axios'` to keep it as it was. Same semantics: one memoized
-  client per instance, so interceptors attached at one call site stay visible at every other.
-* `useOAuthInterceptors()` moved to `vue-oidc/axios`. `oauth.authorizationInterceptor` /
-  `oauth.unauthorizedInterceptor` are gone from the instance — build them with
-  `createAxiosInterceptors(oauth)` from that entry.
-* `inject('http')` → `inject('fetch')`.
+* `useOAuthHttp()` → `useOAuthFetch()`, **or** keep axios: `bun add axios`, build the instance with
+  `createAxiosOAuth()` instead of `createOAuth()`, and change the import to
+  `import { useOAuthHttp } from 'vue-oidc/axios'`. Same semantics as v4 — one client per instance, so
+  interceptors attached at one call site stay visible at every other.
+* `inject('http')` keeps working when the instance comes from `createAxiosOAuth()` — it provides the client
+  under both `httpKey` and the plain `'http'` key v4 used.
+* `useOAuthInterceptors()` is gone, along with `oauth.authorizationInterceptor` /
+  `oauth.unauthorizedInterceptor` on the instance. Use `axiosInterceptors(oauth)` from `vue-oidc/axios`,
+  which returns both — it takes the instance explicitly, so it needs no injection context.
+* `inject('http')` → `inject('fetch')` on a plain `createOAuth()` instance (see the axios note above to
+  keep `'http'`).
 * **Composables now require an injection context.** v4 fell back to a module-level pointer (the last
   created/installed instance) when there was none. That pointer is gone: `useOAuth()` and friends throw
   outside a component/store setup, navigation guard or `app.runWithContext()`. Move such calls into a

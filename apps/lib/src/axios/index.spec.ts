@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { createOAuth, installOAuth, registerOAuthCleanup } from '../test-utils'
-import type { OAuth } from '../types'
-import { createAxiosClient, createAxiosInterceptors, useOAuthHttp } from './index'
+import type { AxiosInstance, CreateAxiosDefaults } from 'axios'
+import { createApp, inject } from 'vue'
+import { getActiveOAuth } from '../module'
+import { createOAuth, registerOAuthCleanup, trackOAuth } from '../test-utils'
+import type { OAuth, OAuthConfig } from '../types'
+import { type AxiosOAuth, axiosInterceptors, createAxiosClient, createAxiosOAuth, httpKey, useOAuthHttp } from './index'
 
 registerOAuthCleanup()
 
@@ -9,6 +12,14 @@ const request = (url: string) => ({ url, headers: { set: jest.fn() } }) as any
 
 const requestHandlers = (client: { interceptors: { request: unknown } }) =>
   (client.interceptors.request as any).handlers.map((h: any) => h.fulfilled)
+
+/** an installed axios-flavoured instance plus the injection context its composables require */
+const installAxiosOAuth = (cfg?: OAuthConfig, defaults?: CreateAxiosDefaults) => {
+  const oauth = trackOAuth(createAxiosOAuth(cfg, defaults))
+  const app = createApp({ render: () => null })
+  app.use(oauth)
+  return { oauth, run: <T>(fn: () => T): T => app.runWithContext(fn) }
+}
 
 describe('axios adapter', () => {
   let oauth: OAuth
@@ -23,7 +34,7 @@ describe('axios adapter', () => {
   describe('authorizationInterceptor', () => {
     it('sets the bearer header', async () => {
       oauth.token.value = { access_token: 'at', token_type: 'Bearer' }
-      const { authorizationInterceptor } = createAxiosInterceptors(oauth)
+      const { authorizationInterceptor } = axiosInterceptors(oauth)
 
       const req = request('/api/orders')
       await authorizationInterceptor(req)
@@ -35,7 +46,7 @@ describe('axios adapter', () => {
       refresh.mockResolvedValue({ access_token: 'fresh', token_type: 'Bearer', expires_in: 60 })
       oauth.typeConfig.value = { tokenPath: '/t', clientId: 'c' }
       oauth.token.value = { access_token: 'stale', token_type: 'Bearer', refresh_token: 'r', expires: Date.now() - 10_000 }
-      const { authorizationInterceptor } = createAxiosInterceptors(oauth)
+      const { authorizationInterceptor } = axiosInterceptors(oauth)
 
       const req = request('/api/orders')
       await authorizationInterceptor(req)
@@ -46,7 +57,7 @@ describe('axios adapter', () => {
 
     it('skips ignored paths', async () => {
       oauth.token.value = { access_token: 'at', token_type: 'Bearer' }
-      const { authorizationInterceptor } = createAxiosInterceptors(oauth)
+      const { authorizationInterceptor } = axiosInterceptors(oauth)
 
       const req = request('/api/public/products')
       await authorizationInterceptor(req)
@@ -55,7 +66,7 @@ describe('axios adapter', () => {
     })
 
     it('leaves the request untouched without a token', async () => {
-      const { authorizationInterceptor } = createAxiosInterceptors(oauth)
+      const { authorizationInterceptor } = axiosInterceptors(oauth)
 
       const req = request('/api/orders')
       await authorizationInterceptor(req)
@@ -67,7 +78,7 @@ describe('axios adapter', () => {
   describe('unauthorizedInterceptor', () => {
     it('persists the 401 response body as token and re-rejects', async () => {
       oauth.token.value = { access_token: 'at' }
-      const { unauthorizedInterceptor } = createAxiosInterceptors(oauth)
+      const { unauthorizedInterceptor } = axiosInterceptors(oauth)
       const error = { response: { status: 401, data: { error: 'invalid_token' } } }
 
       expect(unauthorizedInterceptor(error)).rejects.toBe(error)
@@ -76,7 +87,7 @@ describe('axios adapter', () => {
 
     it('clears the session when the 401 body is not an object', async () => {
       oauth.token.value = { access_token: 'at' }
-      const { unauthorizedInterceptor } = createAxiosInterceptors(oauth)
+      const { unauthorizedInterceptor } = axiosInterceptors(oauth)
       const error = { response: { status: 401, data: '<html>nope</html>' } }
 
       expect(unauthorizedInterceptor(error)).rejects.toBe(error)
@@ -87,7 +98,7 @@ describe('axios adapter', () => {
     it('ignores other errors', async () => {
       const initial = { access_token: 'at' }
       oauth.token.value = initial
-      const { unauthorizedInterceptor } = createAxiosInterceptors(oauth)
+      const { unauthorizedInterceptor } = axiosInterceptors(oauth)
       const error = { response: { status: 500, data: 'boom' } }
 
       expect(unauthorizedInterceptor(error)).rejects.toBe(error)
@@ -118,12 +129,39 @@ describe('axios adapter', () => {
     })
   })
 
+  describe('createAxiosOAuth', () => {
+    it('carries the client on the instance and honours defaults', () => {
+      const { oauth } = installAxiosOAuth({ functions: { refresh: jest.fn() } }, { baseURL: 'https://api.io' })
+
+      expect(oauth.http.defaults.baseURL).toBe('https://api.io')
+      expect(requestHandlers(oauth.http)).toHaveLength(1)
+    })
+
+    // Object.assign, not a spread: the instance provides *itself* under oauthKey, so a copy would leave
+    // useOAuth() handing back an object with no `http` and two identities over one state
+    it('keeps one identity — what it provides is what it returns', () => {
+      const { oauth, run } = installAxiosOAuth({ functions: { refresh: jest.fn() } })
+
+      expect(run(() => getActiveOAuth())).toBe(oauth)
+      expect((run(() => getActiveOAuth()) as AxiosOAuth).http).toBe(oauth.http)
+    })
+
+    it('still provides everything the core install does', () => {
+      const { oauth, run } = installAxiosOAuth({ functions: { refresh: jest.fn() } })
+
+      expect(run(() => inject(httpKey))).toBe(oauth.http)
+      // v4 compatibility: inject('http') used to hand back the axios client
+      expect(run(() => inject<AxiosInstance>('http'))).toBe(oauth.http)
+      expect(run(() => inject<OAuth['login']>('login'))).toBe(oauth.login)
+    })
+  })
+
   describe('useOAuthHttp', () => {
     // this entry reaches the root by package name so the bundler keeps it external. A relative import
-    // would inline a second copy of oauthKey, and then this composable could not see what the app
-    // provided — which is exactly what these tests would catch
-    it('resolves the instance in the injection context and attaches the interceptors', async () => {
-      const { oauth, run } = installOAuth({ ignorePaths: [/public/], functions: { refresh: jest.fn() } })
+    // would inline a second copy of oauthKey, and then createAxiosOAuth would provide under a key this
+    // entry's composables cannot see — which is exactly what these tests would catch
+    it('resolves the installed client, interceptors attached', async () => {
+      const { oauth, run } = installAxiosOAuth({ ignorePaths: [/public/], functions: { refresh: jest.fn() } })
       oauth.token.value = { access_token: 'at', token_type: 'Bearer' }
 
       const client = run(() => useOAuthHttp())
@@ -136,7 +174,7 @@ describe('axios adapter', () => {
     // the contract consumers build on: interceptors registered from one store or component must be seen by
     // every other call site. A fresh client per call would drop them silently — no error, just gone
     it('answers every call site with the same client, so added interceptors stay visible', () => {
-      const { run } = installOAuth({ functions: { refresh: jest.fn() } })
+      const { run } = installAxiosOAuth({ functions: { refresh: jest.fn() } })
       const mine = jest.fn(req => req)
 
       run(() => useOAuthHttp()).interceptors.request.use(mine)
@@ -147,8 +185,8 @@ describe('axios adapter', () => {
     })
 
     it('keeps one client per instance, so concurrent renders cannot cross interceptors', () => {
-      const a = installOAuth({ functions: { refresh: jest.fn() } })
-      const b = installOAuth({ functions: { refresh: jest.fn() } })
+      const a = installAxiosOAuth({ functions: { refresh: jest.fn() } })
+      const b = installAxiosOAuth({ functions: { refresh: jest.fn() } })
       const mine = jest.fn(req => req)
 
       const aClient = a.run(() => useOAuthHttp())
@@ -159,10 +197,20 @@ describe('axios adapter', () => {
       expect(requestHandlers(bClient)).not.toContain(mine)
     })
 
-    it('throws outside an injection context instead of guessing an instance', () => {
-      installOAuth({ functions: { refresh: jest.fn() } })
+    it('throws outside an injection context instead of guessing a client', () => {
+      installAxiosOAuth({ functions: { refresh: jest.fn() } })
 
-      expect(() => useOAuthHttp()).toThrow('[vue-oidc]')
+      expect(() => useOAuthHttp()).toThrow('[vue-oidc/axios]')
+    })
+
+    // a plain createOAuth() instance has no client to hand out, and inventing one here would produce a
+    // client silently missing whatever interceptors the app attached to the real one
+    it('throws when the instance was built with createOAuth instead of createAxiosOAuth', () => {
+      const plain = createOAuth({ functions: { refresh: jest.fn() } })
+      const app = createApp({ render: () => null })
+      app.use(plain)
+
+      expect(() => app.runWithContext(() => useOAuthHttp())).toThrow('createAxiosOAuth')
     })
   })
 })

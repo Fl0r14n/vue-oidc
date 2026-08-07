@@ -1,48 +1,34 @@
 import axios, { type AxiosInstance, type CreateAxiosDefaults, type InternalAxiosRequestConfig } from 'axios'
-import { getActiveOAuth, type OAuth } from 'vue-oidc'
+import { type App, hasInjectionContext, type InjectionKey, inject } from 'vue'
+import { createOAuth, type OAuth, type OAuthConfig } from 'vue-oidc'
 
 /** The axios adapter, published as `vue-oidc/axios`.
  *
  * The core speaks `fetch` and has no HTTP client dependency — axios used to be a required peer for every
  * consumer, including the ones who never touched it. This entry keeps the ergonomics for apps that do
- * want interceptors, and it is the only place axios is imported, so the dependency is optional.
+ * want interceptors, and it is the only place axios is imported, so the dependency is optional. That is
+ * also why the composition lives here rather than behind a `createOAuth(cfg, withAxios)` flag: a flag
+ * would put an axios branch in the core entry and the separate build would stop meaning anything.
  *
  * The core is imported by package name, not relatively, so the bundler keeps it external and this entry
- * resolves the *same* active instance the app installed. A relative import would inline a second copy of
- * the module pointer and every composable here would answer with an instance nobody installed. */
+ * sees the same `oauthKey` the app provided to. A relative import would inline a second copy of it and
+ * every composable here would resolve nothing. */
 
-/** Attaches the bearer, refreshing an expired token first, and skips URLs registered with
- * `oauth.ignorePath()`. */
-export const authorizationInterceptor =
-  (oauth: OAuth) =>
-  async (req: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+export const axiosInterceptors = (oauth: OAuth) => ({
+  authorizationInterceptor: async (req: InternalAxiosRequestConfig) => {
     for (const [key, value] of Object.entries(await oauth.authHeaders(req.url))) {
       req.headers.set(key, value)
     }
     return req
+  },
+  unauthorizedInterceptor: (error: any) => {
+    if (401 === error?.response?.status) {
+      // a string body (HTML, empty, a proxy's plain-text error) is not token state
+      const { data } = error.response
+      oauth.token.value = (typeof data === 'object' && data) || {}
+    }
+    return Promise.reject(error)
   }
-
-/** Stores a 401's body as the new token state, so a session the IdP invalidated behind our back surfaces
- * as an error instead of a token that looks fine and fails every call — see the same branch in the core's
- * `fetch.ts`. Re-rejects: this is not error handling, it is bookkeeping. */
-export const unauthorizedInterceptor = (oauth: OAuth) => (error: any) => {
-  if (401 === error?.response?.status) {
-    // axios hands `data` over as a string when the body is HTML or empty, and a string is not token state
-    const { data } = error.response
-    oauth.token.value = (typeof data === 'object' && data) || {}
-  }
-  return Promise.reject(error)
-}
-
-export interface AxiosInterceptors {
-  authorizationInterceptor: (req: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig>
-  unauthorizedInterceptor: (error: any) => Promise<never>
-}
-
-/** For attaching to an axios instance you already have. */
-export const createAxiosInterceptors = (oauth: OAuth): AxiosInterceptors => ({
-  authorizationInterceptor: authorizationInterceptor(oauth),
-  unauthorizedInterceptor: unauthorizedInterceptor(oauth)
 })
 
 /** A fresh axios instance with both interceptors attached.
@@ -51,35 +37,36 @@ export const createAxiosInterceptors = (oauth: OAuth): AxiosInterceptors => ({
  * interceptors would mean one request's bearer on another request's call. */
 export const createAxiosClient = (oauth: OAuth, defaults?: CreateAxiosDefaults): AxiosInstance => {
   const client = axios.create({ headers: { 'Content-Type': 'application/json' }, ...defaults })
-  const { authorizationInterceptor: onRequest, unauthorizedInterceptor: onError } = createAxiosInterceptors(oauth)
+  const { authorizationInterceptor: onRequest, unauthorizedInterceptor: onError } = axiosInterceptors(oauth)
   client.interceptors.request.use(onRequest)
   client.interceptors.response.use(response => response, onError)
   return client
 }
 
-// One client per OAuth instance. Callers attach their own interceptors to what useOAuthHttp() returns and
-// then read it back from an unrelated store or component, so every call has to answer with the same
-// object — a fresh client per call would drop those interceptors on the floor silently.
-//
-// Weak and keyed by the instance, which is the scope that matters: a module-level singleton would let two
-// concurrent SSR renders cross interceptors, and here a request's client is unreachable — and collectable
-// — the moment its instance is.
-const clients = new WeakMap<OAuth, AxiosInstance>()
+export const httpKey: InjectionKey<AxiosInstance> = Symbol('vue-oidc/axios')
+export type AxiosOAuth = OAuth & { http: AxiosInstance }
 
-/** The instance's authorized axios client, resolved like every other composable (injection context first,
- * active-instance pointer outside one). Memoized per OAuth instance: interceptors added at one call site
- * are visible at every other, which is what consumers build on.
- *
- * Takes no defaults, deliberately — with several call sites sharing the client, whichever ran first would
- * silently decide them. Use `createAxiosClient(oauth, defaults)` for a separately configured client. */
-export const useOAuthHttp = (): AxiosInstance => {
-  const oauth = getActiveOAuth()
-  const existing = clients.get(oauth)
-  if (existing) return existing
-  const client = createAxiosClient(oauth)
-  clients.set(oauth, client)
-  return client
+export const createAxiosOAuth = (cfg?: OAuthConfig, defaults?: CreateAxiosDefaults): AxiosOAuth => {
+  const oauth = createOAuth(cfg)
+  const http = createAxiosClient(oauth, defaults)
+  const install = oauth.install
+  return Object.assign(oauth, {
+    http,
+    install: (app: App) => {
+      install(app)
+      app.provide(httpKey, http)
+      // v4 provided the axios client under the plain 'http' key; keep it for `inject('http')` callers
+      app.provide('http', http)
+    }
+  })
 }
 
-/** The interceptor pair for the active instance, for attaching to a client you built yourself. */
-export const useOAuthInterceptors = (): AxiosInterceptors => createAxiosInterceptors(getActiveOAuth())
+export const useOAuthHttp = (): AxiosInstance => {
+  const http = hasInjectionContext() && inject(httpKey, undefined)
+  if (!http) {
+    throw new Error(
+      '[vue-oidc/axios]: no axios client in this injection context. Create the instance with createAxiosOAuth() instead of createOAuth() and install it with app.use(), then resolve inside a component/store setup, a navigation guard (before the first await), or app.runWithContext(). To manage a client yourself, use createAxiosClient(oauth).'
+    )
+  }
+  return http
+}

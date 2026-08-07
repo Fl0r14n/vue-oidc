@@ -16,11 +16,13 @@ export const registerOAuthCleanup = () =>
     })
   })
 
-export const createOAuth = (cfg?: OAuthConfig): OAuth => {
-  const instance = create(cfg)
+/** register an instance built elsewhere — e.g. `createAxiosOAuth()`, which core specs cannot import */
+export const trackOAuth = <T extends OAuth>(instance: T): T => {
   live.push(instance)
   return instance
 }
+
+export const createOAuth = (cfg?: OAuthConfig): OAuth => trackOAuth(create(cfg))
 
 /** An installed instance plus the injection context its composables require — there is no module-level
  * pointer to resolve through, so anything calling `useOAuth*()` has to run inside one. `run` is what a
