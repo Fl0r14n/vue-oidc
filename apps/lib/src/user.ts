@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue'
 import type { ConfigContext } from './config'
-import type { HttpContext } from './http'
+import type { FetchContext } from './fetch'
 import type { Jwt } from './jwt'
 import type { TokenContext } from './token'
 import type { OAuthFunctions, UserInfo } from './types'
@@ -8,7 +8,7 @@ import type { OAuthFunctions, UserInfo } from './types'
 export const createUser = (
   { config }: Pick<ConfigContext, 'config'>,
   { token, isAuthorized }: Pick<TokenContext, 'token' | 'isAuthorized'>,
-  { http }: Pick<HttpContext, 'http'>,
+  { oauthFetch }: Pick<FetchContext, 'oauthFetch'>,
   functions: OAuthFunctions,
   jwt: Jwt
 ) => {
@@ -30,7 +30,7 @@ export const createUser = (
     [isAuthorized, () => (config.value as any)?.userPath],
     async ([authorized, userPath]) => {
       if (authorized && userPath) {
-        const usr = await functions.userInfo(config.value, http)
+        const usr = await functions.userInfo(config.value, oauthFetch)
         if (usr) {
           user.value = usr
         }

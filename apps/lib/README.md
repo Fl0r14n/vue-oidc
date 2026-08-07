@@ -61,13 +61,85 @@ export const oauthCallbackGuard: NavigationGuardWithThis<undefined> = async (to:
 const oauth = useOAuth()
 ```
 
-* other miscellaneous stores: `useOAuthConfig()`, `useOAuthToken()`, `useOAuthUser()`, `useOAuthHttp()`
-  and `useOAuthInterceptors()`
+* other miscellaneous stores: `useOAuthConfig()`, `useOAuthToken()`, `useOAuthUser()` and `useOAuthFetch()`
 
 The composables resolve the current `OAuth` instance — via `inject(oauthKey)` inside component setup, and via
 the last created/installed instance elsewhere (router guards, pinia stores). You can also hold on to the
 instance returned by `createOAuth()` directly; it exposes everything the composables do
-(`token`, `user`, `status`, `login`, `checkToken`, `http`, ...).
+(`token`, `user`, `status`, `login`, `checkToken`, `fetch`, ...).
+
+#### Authorized requests
+
+The transport is `fetch`. `oauth.fetch` attaches the bearer, refreshes it first when it is expired, and
+records a 401's body as the new token state so a session the IdP invalidated behind your back surfaces as
+an error instead of a token that looks fine and fails every call:
+
+```typescript
+import { useOAuthFetch } from 'vue-oidc'
+
+const oauthFetch = useOAuthFetch()
+const orders = await oauthFetch('/api/orders').then(r => r.json())
+```
+
+`Accept: application/json` is set on every request, and a **string** body is labelled
+`application/json` — typed bodies (`FormData`, `Blob`, `URLSearchParams`, ...) keep the Content-Type the
+platform gives them. Paths registered with `oauth.ignorePath(/pattern/)` are sent without a bearer and
+never touch the session.
+
+Only the bearer is needed for the raw header — `oauth.authHeaders(url)` returns `{ Authorization }` (or
+`{}`), which is what the axios adapter is built on.
+
+#### axios (Optional)
+
+axios is an **optional** peer dependency, imported by the `vue-oidc/axios` entry only — the library
+itself has no HTTP client in its graph. Install it if you want it:
+
+```sh
+bun i axios --save
+```
+
+```typescript
+import { useOAuthHttp } from 'vue-oidc/axios'
+
+// an axios instance with both interceptors attached
+const http = useOAuthHttp()
+const { data } = await http.get('/api/orders')
+```
+
+The client is memoized **per `OAuth` instance**, so every call site gets the same one and interceptors you
+add in a store are seen by callers everywhere else:
+
+```typescript
+// somewhere at setup — adds a header to every authorized request in the app
+useOAuthHttp().interceptors.request.use(req => {
+  req.params = req.params || new URLSearchParams()
+  req.params.append('lang', 'en')
+  return req
+})
+```
+
+Per instance rather than per module, because a module-level singleton would let two concurrent SSR renders
+cross interceptors. `useOAuthHttp()` takes no defaults for the same reason the memoization exists — with
+several call sites sharing the client, whichever ran first would silently decide them. Use
+`createAxiosClient(oauth, defaults)` when you want a separately configured client.
+
+For a client you configure yourself, attach the pair instead:
+
+```typescript
+import axios from 'axios'
+import { useOAuthInterceptors } from 'vue-oidc/axios'
+
+const { authorizationInterceptor, unauthorizedInterceptor } = useOAuthInterceptors()
+const http = axios.create({ baseURL: '/api' })
+http.interceptors.request.use(authorizationInterceptor)
+http.interceptors.response.use(r => r, unauthorizedInterceptor)
+```
+
+Outside any injection context — or under SSR, where the composables' pointer fallback is deliberately
+ambiguous — pass the instance explicitly: `createAxiosClient(oauth, defaults?)` and
+`createAxiosInterceptors(oauth)`. Build **one client per `OAuth` instance**, never a shared module-level
+default: on the server two concurrent requests sharing interceptors would mean one request's bearer on
+another request's call.
 
 #### Override oauth functions (Optional)
 
@@ -117,6 +189,29 @@ the client's own exchange would then fail with `invalid_grant`. Callback guards 
 
 The library itself never imports `node:async_hooks` — it stays runtime-agnostic.
 
+#### Migrating from v4
+
+axios is no longer required. The protocol is six form-encoded POSTs and two GETs, which needs no client
+library — making one a required peer taxed every consumer, including the ones who never touched it. The
+library now runs on `fetch`, so it also works where axios is awkward: a worker, a route handler, a plain
+service.
+
+* `oauth.http` (axios instance) → `oauth.fetch` (`OAuthFetch`, the standard `fetch` signature), plus
+  `oauth.authHeaders(url)` for the raw `Authorization` header.
+* `useOAuthHttp()` → `useOAuthFetch()`, **or** `bun add axios` and change the import to
+  `import { useOAuthHttp } from 'vue-oidc/axios'` to keep it as it was. Same semantics: one memoized
+  client per instance, so interceptors attached at one call site stay visible at every other.
+* `useOAuthInterceptors()` moved to `vue-oidc/axios`. `oauth.authorizationInterceptor` /
+  `oauth.unauthorizedInterceptor` are gone from the instance — build them with
+  `createAxiosInterceptors(oauth)` from that entry.
+* `inject('http')` → `inject('fetch')`.
+* `functions.userInfo(config, instance?: AxiosInstance)` → `functions.userInfo(config, request?: OAuthFetch)`.
+  A custom `userInfo` override must call `request(url, init)` and read `response.json()` itself.
+* Custom `functions` overrides that returned axios responses now return parsed bodies — same as before,
+  but you own the parsing. Errors must **not** throw: an RFC 6749 §5.2 error body *is* the payload and has
+  to reach the token, and `revoke` runs during logout where a throw would strand the local session.
+* Stored tokens are compatible — same default `storageKey`, same format.
+
 #### Migrating from v3
 
 * State moved from module scope onto the instance: multiple isolated instances are now possible and
@@ -139,7 +234,7 @@ import { inject } from 'vue'
 
 const login = inject('login') //oauth login function
 const logout = inject('logout') //oauth logout function
-const http = inject('http') //axios http which will append authorization token  
+const fetch = inject('fetch') //authorized fetch which will append the authorization token
 const oauthCallback = inject('oauth-callback') // if you want to call this from vue component not guard
 ```
 
@@ -245,6 +340,7 @@ bun i vue-oidc --save
 
 * vue3
 * vuetify/vue-i18n if using the `OAuth` component
+* axios only if using `vue-oidc/axios` — the library itself needs no HTTP client
 
 #### Licensing
 

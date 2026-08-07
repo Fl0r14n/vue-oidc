@@ -1,9 +1,9 @@
 import { type App, effectScope, hasInjectionContext, type InjectionKey, inject } from 'vue'
 import { createConfig } from './config'
+import { createFetch } from './fetch'
+import { createFlows } from './flows'
 import { defaultOAuthFunctions } from './functions'
-import { createHttp } from './http'
 import { createJwt } from './jwt'
-import { createFlows } from './oauth'
 import { createToken, isExpiredToken } from './token'
 import type { OAuth, OAuthConfig } from './types'
 import { createUser } from './user'
@@ -50,17 +50,17 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
     const functions = { ...defaultOAuthFunctions, ...cfg?.functions }
     const jwt = createJwt(configContext)
     const tokenContext = createToken(configContext, functions)
-    const httpContext = createHttp(configContext, tokenContext)
+    const fetchContext = createFetch(configContext, tokenContext)
     const flows = createFlows(configContext, tokenContext, functions, jwt)
-    const { user } = createUser(configContext, tokenContext, httpContext, functions, jwt)
+    const { user } = createUser(configContext, tokenContext, fetchContext, functions, jwt)
     const { oauthConfig, config, ignorePath, storageKey } = configContext
     const { token, type, accessToken, status, isAuthorized, error, hasError, errorDescription, autoconfigOauth, checkToken } = tokenContext
-    const { http, authorizationInterceptor, unauthorizedInterceptor } = httpContext
+    const { authHeaders, oauthFetch } = fetchContext
     const { state, login, logout, oauthCallback } = flows
     const oauth: OAuth = {
       install: (app: App) => {
         app.provide(oauthKey, oauth)
-        app.provide('http', http)
+        app.provide('fetch', oauthFetch)
         app.provide('login', login)
         app.provide('logout', logout)
         app.provide('oauth-callback', oauthCallback)
@@ -81,7 +81,8 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
       storageKey,
       ignorePath,
       functions,
-      http,
+      fetch: oauthFetch,
+      authHeaders,
       token,
       user,
       state,
@@ -96,9 +97,7 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
       logout,
       oauthCallback,
       checkToken,
-      autoconfigOauth,
-      authorizationInterceptor,
-      unauthorizedInterceptor
+      autoconfigOauth
     }
     return oauth
   }) as OAuth
@@ -110,14 +109,7 @@ export const useOAuthConfig = () => getActiveOAuth().config
 export const useOAuthFunctions = () => getActiveOAuth().functions
 export const useOAuthToken = () => getActiveOAuth().token
 export const useOAuthUser = () => getActiveOAuth().user
-export const useOAuthHttp = () => getActiveOAuth().http
-export const useOAuthInterceptors = () => {
-  const { authorizationInterceptor, unauthorizedInterceptor } = getActiveOAuth()
-  return {
-    authorizationInterceptor,
-    unauthorizedInterceptor
-  }
-}
+export const useOAuthFetch = () => getActiveOAuth().fetch
 export const useOAuth = () => {
   const {
     typeConfig,

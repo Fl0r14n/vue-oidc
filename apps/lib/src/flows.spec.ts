@@ -25,7 +25,7 @@ const mockLocation = {
 // oauthCallback no-ops without a window (server render must not burn the code) — bun has none
 ;(globalThis as any).window = globalThis
 
-describe('oauth', () => {
+describe('flows', () => {
   let oauth: OAuth
   let functions: {
     resourceOwnerLogin: jest.Mock

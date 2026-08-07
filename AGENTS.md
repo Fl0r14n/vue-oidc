@@ -37,16 +37,34 @@ npm tag, but `vue-tsc` still requires `typescript/lib/tsc` and `rolldown-plugin-
 
 ## Library (`apps/lib`)
 
-- **Build**: `tsdown` → ESM output to `dist/`, generates `.d.mts` types
-- **Tests**: `bun test` using `bun:test`. One spec per module (`config`, `token`, `oauth`, `http`, `user`, `module`, `ref`)
-- **Exports**: `vue-oidc` (main) and `vue-oidc/component` (raw `OAuth.vue` source)
-- **Peer deps**: `vue^3` (required), `vuetify^3`, `@mdi/js` (all optional)
-- **Runtime deps**: `axios` (never bundled per tsdown config)
+- **Build**: `tsdown` → ESM output to `dist/`, generates `.d.mts` types. `bun run build` also runs
+  `verify-entries.ts`, which asserts the entry invariants below against the built output
+- **Tests**: `bun test` using `bun:test`. One spec per module (`config`, `token`, `flows`, `fetch`,
+  `functions`, `user`, `module`, `ref`, `axios/index`)
+- **Exports**: `vue-oidc` (main), `vue-oidc/axios` (optional axios adapter) and `vue-oidc/component`
+- **Peer deps**: `vue^3` (required), `axios^1`, `vuetify^3`, `@mdi/js` (all optional)
+- **Runtime deps**: `jose`
 
-### Architecture (v4, instance-based)
+### Build entries
+
+Three separate builds, each with its own externals:
+
+- `index` — the library. Transport is `fetch`; **nothing in its graph may import axios**, or the optional
+  peer becomes required for every consumer.
+- `axios` — the optional adapter (`src/axios/index.ts`). The **only** file that may import axios.
+- `component` — the optional vuetify UI. Keeps vuetify/`@mdi` out of an app that only wants composables.
+
+The two optional entries import the root **by package name** (`from 'vue-oidc'`), never relatively, so the
+bundler keeps it external and there is one copy of the active-instance pointer at runtime. A relative
+import across an entry boundary silently inlines a second copy and every composable in that entry answers
+with an instance nobody installed. `tsconfig.json` maps `vue-oidc` → `src/index.ts` via `paths` so
+`bun test` and type-checking resolve source instead of a possibly-stale `dist/`; `deps.neverBundle` still
+externalizes it in the bundle, and `verify-entries.ts` asserts the import survived.
+
+### Architecture (v5, instance-based, fetch transport)
 
 - All state lives on an `OAuth` instance built by `createOAuth()` — no module-level state except the
-  active-instance pointer. Each source file exports a factory (`createConfig`, `createToken`, `createHttp`,
+  active-instance pointer. Each source file exports a factory (`createConfig`, `createToken`, `createFetch`,
   `createFlows`, `createUser`, `createJwt`); `module.ts` composes them inside a detached `effectScope`
   (`dispose()` stops all watchers). Factories bind their dependencies via closures at construction —
   never resolve state through the active pointer inside library internals, that reintroduces the
@@ -71,6 +89,9 @@ bun test provides **no** `localStorage` — a spec that needs storage must insta
 module-load mock (see `ref.spec.ts`/`user.spec.ts`); relying on another file's mock leaking in
 makes the test depend on file load order. Mocks are process-shared once installed, so any spec
 that creates instances must run `globalThis.localStorage?.clear()` in `beforeEach`.
+
+A spec that replaces `globalThis.fetch` must restore the real one in `afterEach` — the process is shared
+across spec files, so a leaked mock breaks whichever file runs next (`fetch.spec.ts`, `functions.spec.ts`).
 
 Specs must also dispose every instance they create: bun runs all spec files in one process and the
 alive-instance count drives the server-side ambiguity error in `getActiveOAuth`. Use the tracked
@@ -106,5 +127,5 @@ App env vars use `VITE_` prefix (Vite convention):
 ## Test quirks
 
 - Tests mock modules via `mock.module()` from `bun:test`
-- `crypto` and `location` globals are manually mocked in `oauth.spec.ts`
+- `crypto` and `location` globals are manually mocked in `flows.spec.ts`
 - Only the library has tests; the app has vitest configured but no test files

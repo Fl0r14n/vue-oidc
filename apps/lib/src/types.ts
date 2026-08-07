@@ -1,5 +1,6 @@
-import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import type { App, ComputedRef, Ref, WritableComputedRef } from 'vue'
+
+export type OAuthFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
 export type ClientCredentialConfig = {
   tokenPath: string
@@ -148,7 +149,7 @@ export interface OAuthFunctions {
   resourceOwnerLogin: (parameters: ResourceOwnerParameters, config?: ResourceOwnerConfig) => Promise<OAuthToken | undefined>
   clientCredentialLogin: (config?: ClientCredentialConfig) => Promise<OAuthToken | undefined>
   openIdConfiguration: (config?: Partial<OpenIdConfig>) => Promise<OpenIdConfiguration | undefined>
-  userInfo: (config?: Partial<OpenIdConfig>, instance?: AxiosInstance) => Promise<UserInfo | undefined>
+  userInfo: (config?: Partial<OpenIdConfig>, request?: OAuthFetch) => Promise<UserInfo | undefined>
   introspect: (token?: OAuthToken, config?: Partial<OpenIdConfig>) => Promise<IntrospectInfo | undefined>
 }
 
@@ -164,7 +165,8 @@ export interface OAuth {
    * patterns via `config.value.ignorePaths` */
   ignorePath: (pattern: RegExp) => void
   functions: OAuthFunctions
-  http: AxiosInstance
+  fetch: OAuthFetch
+  authHeaders: (url?: string) => Promise<Record<string, string>>
   token: Ref<OAuthToken>
   user: Ref<UserInfo | undefined>
   state: Ref<string | undefined>
@@ -180,6 +182,4 @@ export interface OAuth {
   oauthCallback: (url?: string | URL) => Promise<void>
   checkToken: () => Promise<void>
   autoconfigOauth: () => Promise<void>
-  authorizationInterceptor: (req: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig>
-  unauthorizedInterceptor: (error: any) => Promise<never>
 }
