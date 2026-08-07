@@ -63,10 +63,20 @@ const oauth = useOAuth()
 
 * other miscellaneous stores: `useOAuthConfig()`, `useOAuthToken()`, `useOAuthUser()` and `useOAuthFetch()`
 
-The composables resolve the current `OAuth` instance — via `inject(oauthKey)` inside component setup, and via
-the last created/installed instance elsewhere (router guards, pinia stores). You can also hold on to the
-instance returned by `createOAuth()` directly; it exposes everything the composables do
-(`token`, `user`, `status`, `login`, `checkToken`, `fetch`, ...).
+The composables resolve the current `OAuth` instance through `inject(oauthKey)`, so they must be called
+inside an **injection context**: a component setup, a pinia store setup, a vue-router navigation guard, or
+`app.runWithContext()`. There is no module-level "active instance" to fall back on — see
+[SSR](#ssr) for why. Outside a context, hold the instance `createOAuth()` returned; it exposes everything
+the composables do (`token`, `user`, `status`, `login`, `checkToken`, `fetch`, ...).
+
+In an `async` guard or handler the context covers the **synchronous** part only, so resolve before the
+first `await`:
+
+```typescript
+const { oauthCallback, state } = useOAuth()   // ✓ resolved first
+await oauthCallback(url)
+// const { login } = useOAuth()               // ✗ context is gone here — throws
+```
 
 #### Authorized requests
 
@@ -167,10 +177,15 @@ Create and install **one instance per request** — instances are fully isolated
 `dispose()` stops an instance's watchers when the render is done.
 
 Composables resolve the instance through Vue's injection context (`app.use(oauth)` provides it):
-component setup, pinia store setups and vue-router navigation guards all run inside the app's
-context, so they always answer with the *request's* instance. Outside any injection context the
-module-level pointer (last created/installed instance) answers — on the server this **throws**
-when several instances are alive, because a global answer could belong to another request:
+component setup, pinia store setups and vue-router navigation guards all run inside the app's context, so
+they always answer with the *request's* instance. Pinia wraps store setups in `app.runWithContext` itself,
+so even a lazily created store resolves correctly.
+
+Outside any injection context, resolution **throws** rather than falling back to a module-level pointer.
+That is deliberate: a pointer answers even when the answer is ambiguous, and under concurrent SSR the
+ambiguous answer is another request's instance — one user's bearer on another user's call. Throwing means
+an unresolvable call site fails identically everywhere and on its first run, instead of working on the
+client and in single-request tests and going wrong only under production load.
 
 ```typescript
 // entry-server.ts — per request:
@@ -205,6 +220,11 @@ service.
   `oauth.unauthorizedInterceptor` are gone from the instance — build them with
   `createAxiosInterceptors(oauth)` from that entry.
 * `inject('http')` → `inject('fetch')`.
+* **Composables now require an injection context.** v4 fell back to a module-level pointer (the last
+  created/installed instance) when there was none. That pointer is gone: `useOAuth()` and friends throw
+  outside a component/store setup, navigation guard or `app.runWithContext()`. Move such calls into a
+  setup, resolve before the first `await`, or hold the instance `createOAuth()` returned.
+* `getActiveOAuth()` still exists, with the same rule — it resolves the context's instance or throws.
 * `functions.userInfo(config, instance?: AxiosInstance)` → `functions.userInfo(config, request?: OAuthFetch)`.
   A custom `userInfo` override must call `request(url, init)` and read `response.json()` itself.
 * Custom `functions` overrides that returned axios responses now return parsed bodies — same as before,

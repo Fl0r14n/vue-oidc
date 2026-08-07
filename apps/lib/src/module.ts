@@ -10,42 +10,19 @@ import { createUser } from './user'
 
 export const oauthKey: InjectionKey<OAuth> = Symbol('vue-oidc')
 
-// pointer to the last created/installed instance so composables work outside any injection context
-// (the same shape as pinia's activePinia / vue-router's install-provided key)
-let activeOAuth: OAuth | undefined
-
-// instances alive right now (created and not disposed) — >1 means concurrent apps, where the
-// module pointer is ambiguous
-let aliveInstances = 0
-
-const pointerFallback = () => {
-  // the pointer is only wrong when ambiguous: on the server with several instances alive
-  // (concurrent SSR) it could hand out another request's instance — fail loud. On the client
-  // the last-installed instance stays the deliberate answer.
-  if (activeOAuth && aliveInstances > 1 && typeof window === 'undefined') {
-    throw new Error(
-      '[vue-oidc]: ambiguous OAuth instance: multiple instances are alive on the server. Resolve inside an injection context (component/store setup, navigation guard, app.runWithContext).'
-    )
-  }
-  return activeOAuth
-}
-
 export const getActiveOAuth = (): OAuth => {
-  // hasInjectionContext, not getCurrentInstance: inject() also resolves inside pinia store setups
-  // and vue-router navigation guards, which run under the app's runWithContext without a component
-  // instance — exactly the places a per-request SSR app needs per-app resolution
-  const instance = (hasInjectionContext() && inject(oauthKey, undefined)) || pointerFallback()
+  const instance = hasInjectionContext() && inject(oauthKey, undefined)
   if (!instance) {
-    throw new Error('[vue-oidc]: no active OAuth instance. Call createOAuth() and install it with app.use() first.')
+    throw new Error(
+      '[vue-oidc]: no OAuth instance in this injection context. Install one with app.use(createOAuth()) and resolve it inside a component/store setup, a navigation guard (before the first await), or app.runWithContext(). Outside a context, hold the instance createOAuth() returned.'
+    )
   }
   return instance
 }
 
 export const createOAuth = (cfg?: OAuthConfig): OAuth => {
   const scope = effectScope(true)
-  let disposed = false
-  aliveInstances++
-  const instance = scope.run(() => {
+  return scope.run(() => {
     const configContext = createConfig(cfg)
     const functions = { ...defaultOAuthFunctions, ...cfg?.functions }
     const jwt = createJwt(configContext)
@@ -64,17 +41,9 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
         app.provide('login', login)
         app.provide('logout', logout)
         app.provide('oauth-callback', oauthCallback)
-        activeOAuth = oauth
       },
       dispose: () => {
-        if (!disposed) {
-          disposed = true
-          aliveInstances--
-        }
         scope.stop()
-        if (activeOAuth === oauth) {
-          activeOAuth = undefined
-        }
       },
       config: oauthConfig,
       typeConfig: config,
@@ -100,9 +69,8 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
       autoconfigOauth
     }
     return oauth
+    // a freshly created detached scope is always active, so run() cannot return undefined here
   }) as OAuth
-  activeOAuth = instance
-  return instance
 }
 
 export const useOAuthConfig = () => getActiveOAuth().config

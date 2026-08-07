@@ -1,67 +1,50 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import { createApp } from 'vue'
 import { createOAuth, getActiveOAuth } from './module'
-import type { OAuth } from './types'
+import { installOAuth, registerOAuthCleanup } from './test-utils'
+
+registerOAuthCleanup()
 
 describe('active instance resolution', () => {
-  const instances: OAuth[] = []
-  const create = () => {
-    const instance = createOAuth()
-    instances.push(instance)
-    return instance
-  }
-
   beforeEach(() => {
     globalThis.localStorage?.clear()
   })
 
-  afterEach(() => {
-    // dispose everything a test created — the alive-instance count drives ambiguity detection
-    instances.splice(0).forEach(i => {
-      i.dispose()
-    })
+  it('resolves the instance provided to the current injection context', () => {
+    const { oauth, run } = installOAuth()
+
+    expect(run(() => getActiveOAuth())).toBe(oauth)
   })
 
-  it('falls back to the pointer while it is unambiguous (single instance alive)', () => {
-    const only = create()
+  it('keeps concurrent instances apart — each context answers with its own', () => {
+    const a = installOAuth()
+    const b = installOAuth()
 
-    expect(getActiveOAuth()).toBe(only)
+    expect(a.run(() => getActiveOAuth())).toBe(a.oauth)
+    expect(b.run(() => getActiveOAuth())).toBe(b.oauth)
   })
 
-  it('throws on the pointer when multiple instances are alive on the server', () => {
-    const first = create()
-    const second = create()
+  // the whole point of having no module-level pointer: an unresolvable call site fails the same way
+  // everywhere and on its first run, instead of quietly answering with another request's instance
+  it('throws outside any injection context, even with an instance installed', () => {
+    installOAuth()
 
-    // no injection context, two candidates: answering could cross requests under SSR
-    expect(() => getActiveOAuth()).toThrow('ambiguous')
-
-    first.dispose()
-    expect(getActiveOAuth()).toBe(second)
+    expect(() => getActiveOAuth()).toThrow('[vue-oidc]: no OAuth instance in this injection context')
   })
 
-  it('resolves through the injection context ahead of the pointer', () => {
-    const injected = create()
-    const app = createApp({})
-    app.use(injected)
+  it('throws inside a context that has no instance installed', () => {
+    createOAuth() // created but never installed — providing nothing to this app
+    const bare = createApp({ render: () => null })
 
-    create() // module pointer now points elsewhere — and the pointer alone would be ambiguous
-
-    // pinia store setups and router guards run inside app.runWithContext — inject must win there
-    expect(app.runWithContext(() => getActiveOAuth())).toBe(injected)
+    expect(() => bare.runWithContext(() => getActiveOAuth())).toThrow('[vue-oidc]')
   })
 
-  it('throws when no instance exists', () => {
-    expect(() => getActiveOAuth()).toThrow('[vue-oidc]')
-  })
+  it('dispose stops the instance without touching resolution for anyone else', () => {
+    const a = installOAuth()
+    const b = installOAuth()
 
-  it('dispose clears the pointer only if it points to the disposed instance', () => {
-    const first = create()
-    const second = create()
+    a.oauth.dispose()
 
-    first.dispose()
-    expect(getActiveOAuth()).toBe(second)
-
-    second.dispose()
-    expect(() => getActiveOAuth()).toThrow('[vue-oidc]')
+    expect(b.run(() => getActiveOAuth())).toBe(b.oauth)
   })
 })

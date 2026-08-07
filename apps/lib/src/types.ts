@@ -155,7 +155,7 @@ export interface OAuthFunctions {
 
 export interface OAuth {
   install: (app: App) => void
-  /** stops this instance's watchers and clears the active pointer if it points here */
+  /** stops this instance's watchers — call it when a server render ends */
   dispose: () => void
   config: Ref<OAuthConfig>
   /** the provider/endpoint part of the config (`config.value.config`) */

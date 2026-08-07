@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { createOAuth, registerOAuthCleanup } from '../test-utils'
+import { createOAuth, installOAuth, registerOAuthCleanup } from '../test-utils'
 import type { OAuth } from '../types'
 import { createAxiosClient, createAxiosInterceptors, useOAuthHttp } from './index'
 
@@ -119,13 +119,14 @@ describe('axios adapter', () => {
   })
 
   describe('useOAuthHttp', () => {
-    // this entry reaches the root by package name so the bundler keeps it external. If that ever inlined
-    // a second copy of the module pointer, the composable would answer with an instance nobody created —
-    // and this is the test that notices
-    it('resolves the active instance and attaches the interceptors', async () => {
+    // this entry reaches the root by package name so the bundler keeps it external. A relative import
+    // would inline a second copy of oauthKey, and then this composable could not see what the app
+    // provided — which is exactly what these tests would catch
+    it('resolves the instance in the injection context and attaches the interceptors', async () => {
+      const { oauth, run } = installOAuth({ ignorePaths: [/public/], functions: { refresh: jest.fn() } })
       oauth.token.value = { access_token: 'at', token_type: 'Bearer' }
-      const client = useOAuthHttp()
 
+      const client = run(() => useOAuthHttp())
       const req = request('/api/orders')
       await (client.interceptors.request as any).handlers[0].fulfilled(req)
 
@@ -135,33 +136,33 @@ describe('axios adapter', () => {
     // the contract consumers build on: interceptors registered from one store or component must be seen by
     // every other call site. A fresh client per call would drop them silently — no error, just gone
     it('answers every call site with the same client, so added interceptors stay visible', () => {
+      const { run } = installOAuth({ functions: { refresh: jest.fn() } })
       const mine = jest.fn(req => req)
-      useOAuthHttp().interceptors.request.use(mine)
 
-      const elsewhere = useOAuthHttp()
+      run(() => useOAuthHttp()).interceptors.request.use(mine)
+      const elsewhere = run(() => useOAuthHttp())
 
-      expect(elsewhere).toBe(useOAuthHttp())
+      expect(elsewhere).toBe(run(() => useOAuthHttp()))
       expect(requestHandlers(elsewhere)).toContain(mine)
     })
 
     it('keeps one client per instance, so concurrent renders cannot cross interceptors', () => {
+      const a = installOAuth({ functions: { refresh: jest.fn() } })
+      const b = installOAuth({ functions: { refresh: jest.fn() } })
       const mine = jest.fn(req => req)
-      const mineClient = useOAuthHttp()
-      mineClient.interceptors.request.use(mine)
 
-      // a second live instance makes the server-side pointer ambiguous on purpose; stub a window so the
-      // composable resolves the last-created instance the way it would in a browser
-      const realWindow = globalThis.window
-      globalThis.window = {} as any
-      try {
-        createOAuth({ functions: { refresh: jest.fn() } })
-        const otherClient = useOAuthHttp()
+      const aClient = a.run(() => useOAuthHttp())
+      aClient.interceptors.request.use(mine)
+      const bClient = b.run(() => useOAuthHttp())
 
-        expect(otherClient).not.toBe(mineClient)
-        expect(requestHandlers(otherClient)).not.toContain(mine)
-      } finally {
-        globalThis.window = realWindow
-      }
+      expect(bClient).not.toBe(aClient)
+      expect(requestHandlers(bClient)).not.toContain(mine)
+    })
+
+    it('throws outside an injection context instead of guessing an instance', () => {
+      installOAuth({ functions: { refresh: jest.fn() } })
+
+      expect(() => useOAuthHttp()).toThrow('[vue-oidc]')
     })
   })
 })

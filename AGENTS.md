@@ -69,17 +69,19 @@ externalizes it in the bundle, and `verify-entries.ts` asserts the import surviv
   (`dispose()` stops all watchers). Factories bind their dependencies via closures at construction —
   never resolve state through the active pointer inside library internals, that reintroduces the
   cross-request race under SSR.
-- Composable resolution order (`getActiveOAuth`): `inject(oauthKey)` whenever an injection context
-  exists (`hasInjectionContext` — component setup, pinia store setup, vue-router navigation guards,
-  anything under `app.runWithContext`) → module pointer (set by `createOAuth` and `install`, the
-  same shape as pinia's `activePinia`). The pointer only serves calls outside any injection
-  context; on the server it **throws** when hit while multiple instances are alive — a
-  concurrent-SSR answer from a global pointer could belong to another request, so ambiguity fails
-  loud instead of guessing. On the client the last-installed instance stays the answer.
-- SSR: one `createOAuth()` + `app.use()` per request; dispose it when the render ends
-  (`app.runWithContext(() => getActiveOAuth()).dispose()`). Injection-context resolution covers
-  guards and store setups — no per-request resolver mechanism exists or is needed. The lib never
-  imports `node:async_hooks`.
+- Composable resolution (`getActiveOAuth`): `inject(oauthKey)` and nothing else. There is **no**
+  module-level active-instance pointer, deliberately — a pointer answers even when ambiguous, and the
+  ambiguous answer under concurrent SSR is another request's instance (one user's bearer on another
+  user's call). Requiring the context makes an unresolvable call site fail identically everywhere on its
+  first run, instead of working on the client and in single-request tests and breaking only under
+  production SSR load. Do not reintroduce a pointer.
+- `hasInjectionContext`, not `getCurrentInstance`: `inject()` also resolves inside pinia store setups
+  (pinia wraps them in `app.runWithContext` itself, so even a lazily created store is fine) and inside
+  vue-router navigation guards (`runGuardQueue` wraps each guard). In an async guard or handler the
+  context covers the **synchronous** part only — composables must be called before the first `await`.
+- SSR: one `createOAuth()` + `app.use()` per request; dispose it when the render ends. Either hold the
+  instance `createOAuth()` returned or fetch it with `app.runWithContext(() => getActiveOAuth())`. The
+  lib never imports `node:async_hooks`.
 - Behavior overrides are constructor input: `createOAuth({ functions: { refresh } })` merges over
   `defaultOAuthFunctions`. Never mutate a shared functions object.
 
@@ -93,11 +95,14 @@ that creates instances must run `globalThis.localStorage?.clear()` in `beforeEac
 A spec that replaces `globalThis.fetch` must restore the real one in `afterEach` — the process is shared
 across spec files, so a leaked mock breaks whichever file runs next (`fetch.spec.ts`, `functions.spec.ts`).
 
-Specs must also dispose every instance they create: bun runs all spec files in one process and the
-alive-instance count drives the server-side ambiguity error in `getActiveOAuth`. Use the tracked
-factory from `test-utils.ts` (`import { createOAuth, registerOAuthCleanup } from './test-utils'` +
-`registerOAuthCleanup()` at file top — the helper is module-cached, so the afterEach must be
-registered per file).
+Specs must also dispose every instance they create: instances hold watchers, and bun runs all spec files
+in one process. Use the tracked factory from `test-utils.ts` (`import { createOAuth, registerOAuthCleanup }
+from './test-utils'` + `registerOAuthCleanup()` at file top — the helper is module-cached, so the
+afterEach must be registered per file).
+
+A spec that calls a **composable** needs an injection context, since there is no pointer to fall back on.
+Use `installOAuth()` from `test-utils.ts`: it returns the instance plus a `run(fn)` that supplies the
+context the way a component setup or store setup would.
 
 ## App (`apps/app`)
 
