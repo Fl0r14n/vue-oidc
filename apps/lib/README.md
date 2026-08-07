@@ -237,8 +237,9 @@ library — making one a required peer taxed every consumer, including the ones 
 library now runs on `fetch`, so it also works where axios is awkward: a worker, a route handler, a plain
 service.
 
-* `oauth.http` (axios instance) → `oauth.fetch` (`OAuthFetch`, the standard `fetch` signature), plus
-  `oauth.authHeaders(url)` for the raw `Authorization` header.
+* A `createOAuth()` instance no longer has `oauth.http` — it has `oauth.fetch` (`OAuthFetch`, the standard
+  `fetch` signature) plus `oauth.authHeaders(url)` for the raw `Authorization` header. `oauth.http` comes
+  back if you build with `createAxiosOAuth()` instead (next bullet).
 * `useOAuthHttp()` → `useOAuthFetch()`, **or** keep axios: `bun add axios`, build the instance with
   `createAxiosOAuth()` instead of `createOAuth()`, and change the import to
   `import { useOAuthHttp } from 'vue-oidc/axios'`. Same semantics as v4 — one client per instance, so
