@@ -76,7 +76,6 @@ export const createFlows = (
       params.set('code_challenge_method', 'S256')
     }
     token.value = {
-      ...token.value,
       redirect_uri: parameters.redirectUri,
       ...(nonce && { nonce }),
       ...(pkcePair && { code_verifier: pkcePair.code_verifier })
@@ -129,8 +128,11 @@ export const createFlows = (
       token.value = {}
       globalThis.location?.replace(`${logoutPath}${logoutPath.includes('?') ? '&' : '?'}${params}`)
     } else {
-      await functions.revoke(token.value, config.value)
-      token.value = {}
+      try {
+        await functions.revoke(token.value, config.value)
+      } finally {
+        token.value = {}
+      }
     }
   }
 
