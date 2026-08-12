@@ -64,9 +64,39 @@ See [`apps/lib/README.md`](apps/lib/README.md) for usage, configuration, and IdP
 
 ## Publishing
 
+**Publishing a GitHub release publishes to npm.** That is the whole flow — the release event runs
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml), which checks, builds, type-checks, tests
+and then publishes `vue-oidc`.
+
 ```sh
-bun run publish       # builds lib and publishes vue-oidc to npm
+# 1. bump the version in apps/lib/package.json — that is the published manifest.
+#    The root package.json has its own unrelated version; npm never sees it.
+# 2. commit and tag
+git commit -am 'release 5.2.0'
+git tag v5.2.0
+git push --follow-tags
+# 3. publish the release — this is the step that triggers npm
+gh release create v5.2.0 --generate-notes
 ```
+
+Watch it and confirm the result:
+
+```sh
+gh run watch "$(gh run list --workflow publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')" --exit-status
+npm view vue-oidc version
+```
+
+No npm token is involved. The workflow authenticates with [trusted
+publishing](https://docs.npmjs.com/trusted-publishers/), exchanging GitHub's OIDC token for publish rights,
+which also attaches [provenance](https://docs.npmjs.com/generating-provenance-statements) to the published
+version. That takes one registration per package, already done for this one:
+
+```sh
+npm trust github vue-oidc --file publish.yml --repo Fl0r14n/vue-oidc --allow-publish
+```
+
+`bun run publish` still publishes from a workstation, but prefer the release: a local publish prompts for a
+2FA code and produces no provenance.
 
 ## License
 
