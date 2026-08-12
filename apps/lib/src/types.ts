@@ -63,15 +63,13 @@ export type OAuthTypeConfig =
   | ResourceOwnerConfig
   | ClientCredentialConfig
 
-export type OAuthConfig = {
+export type OAuthConfig<TExtra = unknown> = {
   config?: Partial<OAuthTypeConfig>
   storageKey?: string
   ignorePaths?: RegExp[]
   strictJwt?: boolean
   functions?: Partial<OAuthFunctions>
-
-  [x: string]: any
-}
+} & TExtra
 
 export enum OAuthType {
   RESOURCE = 'password',
@@ -80,7 +78,9 @@ export enum OAuthType {
   CLIENT_CREDENTIAL = 'client_credentials'
 }
 
-export type OAuthToken = {
+/** Open on purpose: RFC 6749 §5.1 permits additional parameters, and this arrives parsed off the wire, so
+ * there is no author to protect from a typo. Name the extras you use through `TExtra` for autocomplete. */
+export type OAuthToken<TExtra = unknown> = {
   id_token?: string
   access_token?: string
   refresh_token?: string
@@ -98,7 +98,7 @@ export type OAuthToken = {
   code?: string
 
   [x: string]: any
-}
+} & TExtra
 
 export enum OAuthStatus {
   NOT_AUTHORIZED = 'NOT_AUTHORIZED',
@@ -119,7 +119,8 @@ export type OpenIdConfiguration = {
   code_challenge_methods_supported?: string[]
 }
 
-export type UserInfo = {
+/** The standard OIDC claims, open for the rest — a claim set is whatever the provider issues. */
+export type UserInfo<TClaims = unknown> = {
   email?: string
   email_verified?: boolean
   family_name?: string
@@ -132,7 +133,7 @@ export type UserInfo = {
   locale?: string
 
   [x: string]: any
-}
+} & TClaims
 
 export type IntrospectInfo = UserInfo & {
   active: boolean
