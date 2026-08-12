@@ -11,6 +11,7 @@
     "ssr:prod": "bun --filter \"*\" --elide-lines=0 ssr:prod",
     "build": "bun --filter \"*\" build",
     "test": "bun --filter \"*\" test",
+    "type-check": "bun --filter \"*\" type-check",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",

@@ -44,6 +44,7 @@
     "build": "tsdown && bun run verify:entries",
     "verify:entries": "bun run verify-entries.ts",
     "test": "bun test",
+    "type-check": "vue-tsc --noEmit",
     "publish": "bun run build && bun publish"
   },
   "dependencies": {

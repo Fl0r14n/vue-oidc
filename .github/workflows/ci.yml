@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      # biome ci, not the `check` script — that one rewrites files instead of failing
+      - run: bunx biome ci .
+      # build first: the client app imports vue-oidc through its exports map, which points into
+      # apps/lib/dist, so on a fresh clone type-check cannot resolve the package until it exists. It also
+      # runs verify:entries, which catches an export map disagreeing with what tsdown emitted.
+      - run: bun run build
+      - run: bun run type-check
+      - run: bun run test
