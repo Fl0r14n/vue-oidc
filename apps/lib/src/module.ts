@@ -94,7 +94,8 @@ export const useOAuth = () => {
     login,
     logout,
     oauthCallback,
-    autoconfigOauth
+    autoconfigOauth,
+    checkToken
   } = getActiveOAuth()
   return {
     config: typeConfig,
@@ -112,6 +113,7 @@ export const useOAuth = () => {
     logout,
     oauthCallback,
     isExpiredToken,
-    autoconfigOauth
+    autoconfigOauth,
+    checkToken
   }
 }
