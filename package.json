@@ -1,6 +1,7 @@
 {
   "name": "vue-oidc-monorepo",
   "version": "1.0.3",
+  "private": true,
   "workspaces": [
     "apps/*"
   ],
@@ -15,7 +16,7 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
-    "publish": "bun --filter vue-oidc publish"
+    "publish:local": "bun --filter vue-oidc publish:local"
   },
   "dependencies": {
     "bun-plugin-vue": "latest"

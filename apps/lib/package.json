@@ -45,7 +45,7 @@
     "verify:entries": "bun run verify-entries.ts",
     "test": "bun test",
     "type-check": "vue-tsc --noEmit",
-    "publish": "bun run build && bun publish"
+    "publish:local": "bun run build && bun publish"
   },
   "dependencies": {
     "jose": "^6"
