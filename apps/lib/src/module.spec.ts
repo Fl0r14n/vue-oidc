@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { createApp } from 'vue'
-import { createOAuth, getActiveOAuth, useOAuth } from './module'
+import { createOAuth, disposeOAuth, getActiveOAuth, useOAuth } from './module'
 import { installOAuth, registerOAuthCleanup } from './test-utils'
 
 registerOAuthCleanup()
@@ -95,5 +95,37 @@ describe('useOAuth surface', () => {
 
     expect(second).toBe(first)
     await expect(first).resolves.toBeUndefined()
+  })
+})
+
+describe('disposeOAuth', () => {
+  beforeEach(() => {
+    globalThis.localStorage?.clear()
+  })
+
+  // The one operation that genuinely needs an instance recovered *from an app*: an SSR
+  // host holds the app it was handed, not the instance a factory created and discarded.
+  it('disposes the instance installed in the app it is handed, and only that one', () => {
+    const a = installOAuth()
+    const b = installOAuth()
+
+    let disposedA = 0
+    let disposedB = 0
+    const stopA = a.oauth.dispose
+    const stopB = b.oauth.dispose
+    a.oauth.dispose = () => {
+      disposedA++
+      stopA()
+    }
+    b.oauth.dispose = () => {
+      disposedB++
+      stopB()
+    }
+
+    disposeOAuth(a.app)
+
+    expect(disposedA).toBe(1)
+    expect(disposedB).toBe(0)
+    expect(b.run(() => getActiveOAuth())).toBe(b.oauth)
   })
 })

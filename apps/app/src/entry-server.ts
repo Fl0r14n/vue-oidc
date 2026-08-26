@@ -1,5 +1,5 @@
 import { renderToString } from 'vue/server-renderer'
-import { getActiveOAuth } from 'vue-oidc'
+import { disposeOAuth } from 'vue-oidc'
 import { createApp } from './main'
 
 const getURL = (req: any) => {
@@ -26,7 +26,7 @@ export const render = async (req: any, manifest: any) => {
     const state = app.getState()
     return { body, head, state: `var state = ${JSON.stringify(state)}` }
   } finally {
-    app.runWithContext(() => getActiveOAuth()).dispose()
+    disposeOAuth(app)
   }
 }
 

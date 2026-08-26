@@ -31,5 +31,5 @@ export const installOAuth = (cfg?: OAuthConfig) => {
   const oauth = createOAuth(cfg)
   const app = createApp({ render: () => null })
   app.use(oauth)
-  return { oauth, run: <T>(fn: () => T): T => app.runWithContext(fn) }
+  return { oauth, app, run: <T>(fn: () => T): T => app.runWithContext(fn) }
 }

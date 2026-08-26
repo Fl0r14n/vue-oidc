@@ -73,6 +73,34 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
   }) as OAuth
 }
 
+/**
+ * Stops the instance installed in `app`.
+ *
+ * `createOAuth` opens a **detached** effect scope, so the watchers it holds — the
+ * refresh watcher, the user watchers, the storage sync — are owned by no component
+ * and nothing stops them for you. On the client that is what you want: one instance,
+ * alive as long as the page.
+ *
+ * Under SSR it is the opposite. One instance per request keeps requests isolated, and
+ * a render that never disposes leaks that request's watchers and its token graph for
+ * the lifetime of the process. Call this in a `finally`, so a render that throws still
+ * cleans up:
+ *
+ * ```ts
+ * try {
+ *   return await renderToString(app)
+ * } finally {
+ *   disposeOAuth(app)
+ * }
+ * ```
+ *
+ * This is the only reason to reach an instance through an app rather than holding what
+ * `createOAuth()` returned, which is why it exists as a named operation.
+ */
+export const disposeOAuth = (app: App) => {
+  app.runWithContext(() => getActiveOAuth()).dispose()
+}
+
 export const useOAuthConfig = () => getActiveOAuth().config
 export const useOAuthFunctions = () => getActiveOAuth().functions
 export const useOAuthToken = () => getActiveOAuth().token

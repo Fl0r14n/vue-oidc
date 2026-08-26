@@ -220,9 +220,14 @@ app.use(oauth)
 try {
   return await renderToString(app)
 } finally {
-  app.runWithContext(() => getActiveOAuth()).dispose()
+  disposeOAuth(app)
 }
 ```
+
+`disposeOAuth(app)` stops the watchers `createOAuth` opened in its detached effect scope — nothing else
+will, so a render that skips it leaks that request's watchers and token graph for the lifetime of the
+process. In a `finally`, so a render that throws still cleans up. If your factory hands the instance back
+rather than discarding it, `oauth.dispose()` is the same thing without the lookup.
 
 `oauthCallback()` no-ops on the server: the `code_verifier` lives in the browser's storage, and a
 server-side exchange without it would still burn the single-use authorization code at the IDP —
