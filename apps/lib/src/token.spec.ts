@@ -3,8 +3,8 @@ import { createOAuth, registerOAuthCleanup } from './test-utils'
 
 registerOAuthCleanup()
 
+import { OAuthStatus, OAuthType } from './core/types'
 import type { OAuth } from './types'
-import { OAuthStatus, OAuthType } from './types'
 
 describe('checkToken', () => {
   let oauth: OAuth

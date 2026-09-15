@@ -1,12 +1,17 @@
 import { computed, watch } from 'vue'
 import type { ConfigContext } from './config'
+import { applyDiscovery, createDiscovery, needsDiscovery } from './core/discovery'
+import type { Discovery, OAuthFunctions, OAuthToken, OpenIdConfig } from './core/types'
+import { OAuthStatus } from './core/types'
 import { storageRef } from './ref'
-import type { OAuthFunctions, OAuthToken, OpenIdConfig } from './types'
-import { OAuthStatus } from './types'
 
 export const isExpiredToken = (token?: OAuthToken) => (token?.expires && Date.now() > token.expires) || false
 
-export const createToken = ({ config, storageKey }: Pick<ConfigContext, 'config' | 'storageKey'>, functions: OAuthFunctions) => {
+export const createToken = (
+  { config, storageKey }: Pick<ConfigContext, 'config' | 'storageKey'>,
+  functions: OAuthFunctions,
+  discovery: Discovery = createDiscovery({ functions })
+) => {
   const token = storageRef<OAuthToken>(storageKey, {})
 
   const type = computed(() => token.value?.type)
@@ -35,23 +40,10 @@ export const createToken = ({ config, storageKey }: Pick<ConfigContext, 'config'
 
   const autoconfigOauth = async () => {
     const c = (config.value || {}) as OpenIdConfig
-    if (!(c.tokenPath || c.authorizePath)) {
-      const v = await functions.openIdConfiguration(c)
-      if (v) {
-        config.value = {
-          ...c,
-          ...(v?.authorization_endpoint && { authorizePath: v.authorization_endpoint }),
-          ...(v?.token_endpoint && { tokenPath: v.token_endpoint }),
-          ...(v?.revocation_endpoint && { revokePath: v.revocation_endpoint }),
-          ...(v?.userinfo_endpoint && { userPath: v.userinfo_endpoint }),
-          ...(v?.introspection_endpoint && { introspectionPath: v.introspection_endpoint }),
-          ...(v?.end_session_endpoint && { logoutPath: v.end_session_endpoint }),
-          ...(v?.jwks_uri && { jwksUri: v.jwks_uri }),
-          ...(c?.pkce === undefined &&
-            v?.code_challenge_methods_supported && { pkce: v.code_challenge_methods_supported.indexOf('S256') > -1 }),
-          scope: config.value?.scope || 'openid'
-        }
-      }
+    if (!needsDiscovery(c)) return
+    const discovered = await discovery(c)
+    if (discovered) {
+      config.value = applyDiscovery(c, discovered)
     }
   }
 

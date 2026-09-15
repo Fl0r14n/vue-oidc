@@ -1,8 +1,9 @@
 import { type App, effectScope, hasInjectionContext, type InjectionKey, inject } from 'vue'
 import { createConfig } from './config'
+import { createDiscovery } from './core/discovery'
+import { resolveOAuthFunctions } from './core/functions'
 import { createFetch } from './fetch'
 import { createFlows } from './flows'
-import { defaultOAuthFunctions } from './functions'
 import { createJwt } from './jwt'
 import { createToken, isExpiredToken } from './token'
 import type { OAuth, OAuthConfig } from './types'
@@ -24,9 +25,10 @@ export const createOAuth = (cfg?: OAuthConfig): OAuth => {
   const scope = effectScope(true)
   return scope.run(() => {
     const configContext = createConfig(cfg)
-    const functions = { ...defaultOAuthFunctions, ...cfg?.functions }
+    const functions = resolveOAuthFunctions(cfg?.functions)
     const jwt = createJwt(configContext)
-    const tokenContext = createToken(configContext, functions)
+    const discovery = cfg?.discovery || createDiscovery({ functions })
+    const tokenContext = createToken(configContext, functions, discovery)
     const fetchContext = createFetch(configContext, tokenContext)
     const flows = createFlows(configContext, tokenContext, functions, jwt)
     const { user } = createUser(configContext, tokenContext, fetchContext, functions, jwt)

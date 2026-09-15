@@ -1,6 +1,6 @@
 import type { ConfigContext } from './config'
+import type { OAuthFetch } from './core/types'
 import type { TokenContext } from './token'
-import type { OAuthFetch } from './types'
 
 export const createFetch = (
   { isPathIgnored }: Pick<ConfigContext, 'isPathIgnored'>,

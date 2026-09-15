@@ -39,18 +39,26 @@ npm tag, but `vue-tsc` still requires `typescript/lib/tsc` and `rolldown-plugin-
 
 - **Build**: `tsdown` → ESM output to `dist/`, generates `.d.mts` types. `bun run build` also runs
   `verify-entries.ts`, which asserts the entry invariants below against the built output
-- **Tests**: `bun test` using `bun:test`. One spec per module (`config`, `token`, `flows`, `fetch`,
-  `functions`, `user`, `module`, `ref`, `axios/index`)
-- **Exports**: `vue-oidc` (main), `vue-oidc/axios` (optional axios adapter) and `vue-oidc/component`
+- **Tests**: `bun test` using `bun:test`. One spec per module (`config`, `token`, `flows`, `fetch`, `jwt`,
+  `user`, `module`, `ref`, `axios/index`, and `core/{authorization,discovery,flow,functions,random,redirect}`).
+  Core specs need no effect scope and no DOM — if a new test does, the behaviour probably belongs in core
+- **Exports**: `vue-oidc` (main), `vue-oidc/core` (the protocol, no vue), `vue-oidc/axios` (optional axios
+  adapter) and `vue-oidc/component`
 - **Peer deps**: `vue^3` (required), `axios^1`, `vuetify^3`, `@mdi/js` (all optional)
 - **Runtime deps**: `jose`
 
 ### Build entries
 
-Three separate builds, each with its own externals:
+Four separate builds, each with its own externals:
 
+- `core` — the protocol: authorization URL construction, redirect parsing, the code exchange, id-token
+  verification, discovery, and the PKCE/state/nonce primitives. **Nothing in its graph may import vue** —
+  that is the entry's whole reason to exist, and `verify-entries.ts` asserts it against the built output.
+  It is the bottom of the graph and imports nothing from above it. `jose` is its only runtime dependency.
+  It holds no module-level state, which is why the root may bundle a second copy of it harmlessly.
 - `index` — the library. Transport is `fetch`; **nothing in its graph may import axios**, or the optional
-  peer becomes required for every consumer.
+  peer becomes required for every consumer. It bundles `core` relatively and re-exports it, rather than
+  importing `vue-oidc/core` by package name — the root cannot name its own package (see the check below).
 - `axios` — the optional adapter (`src/axios/index.ts`). The **only** file that may import axios. It
   composes rather than configures: `createAxiosOAuth()` wraps `createOAuth()` and provides one client per
   instance under `httpKey`. Never add a `createOAuth(cfg, withAxios)`-style flag — that puts an axios
@@ -67,6 +75,23 @@ externalizes it in the bundle, and `verify-entries.ts` asserts the import surviv
 
 ### Architecture (v5, instance-based, fetch transport)
 
+- **Discovery is lazy, and every path that needs an endpoint must await it first.** `autoconfigOauth` runs
+  from `login`, `logout`, the code branch of `oauthCallback` and `checkToken`; `needsDiscovery` makes it a
+  no-op once the endpoints are known. The fourth was missing until `46f1f1c`: the refresh watcher called
+  `functions.refresh` directly, so booting with an expired token in storage refreshed against a config
+  whose `tokenPath` had never been discovered, `refresh` fell through its `refresh_token && tokenPath`
+  guard, and the session never recovered. `b58c291` added the other half — the startup watcher is
+  `[config, accessToken]` with `immediate`, so the initial check waits for a config to exist. Add a call
+  site that touches an endpoint and it awaits `autoconfigOauth` too.
+- Do not move discovery earlier to make it eager. `createOAuth()` is synchronous and `typeConfig` is
+  writable, so the config is not necessarily final when the instance is built, and under SSR an eager
+  lookup would put a well-known fetch on every render including the ones that never touch auth. Caching
+  belongs in the `Discovery` resolver, not in an earlier call site.
+- **`src/core/` is pure and `src/*.ts` is the reactive layer over it.** A function that computes something
+  from its arguments belongs in core; a function that reads or writes a ref belongs above it. `flows.ts`
+  is the adapter between them — it holds the handoff in the token ref, redirects, and delegates the
+  protocol to `core/flow.ts`. Reach for core when adding protocol behaviour, so it stays testable without
+  an effect scope and usable from a server.
 - All state lives on an `OAuth` instance built by `createOAuth()` — no module-level state except the
   active-instance pointer. Each source file exports a factory (`createConfig`, `createToken`, `createFetch`,
   `createFlows`, `createUser`, `createJwt`); `module.ts` composes them inside a detached `effectScope`

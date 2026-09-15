@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
-import type { OAuthConfig, OAuthTypeConfig } from './types'
+import type { OAuthTypeConfig } from './core/types'
+import type { OAuthConfig } from './types'
 
 export const createConfig = (cfg?: OAuthConfig) => {
   const oauthConfig = ref<OAuthConfig>({

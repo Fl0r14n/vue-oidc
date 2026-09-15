@@ -177,10 +177,28 @@ The whole entry is four functions — `createAxiosOAuth` (wired), `useOAuthHttp`
 `AxiosOAuth` type. Only `useOAuthHttp` needs an injection context; the `create*` prefix marks the ones
 that build something stateful from what you hand them.
 
+#### Extra authorization parameters
+
+Anything the standard set does not cover — `ui_locales`, `login_hint`, `acr_values`, Auth0's `audience`,
+Entra's `resource` — goes through `extras`, merged last, without overriding anything:
+
+```typescript
+await login({
+  redirectUri: `${location.origin}/oauth_callback`,
+  responseType: 'code',
+  prompt: 'select_account',
+  extras: { ui_locales: 'de-DE', login_hint: 'me@example.com' }
+})
+```
+
+`state` is generated when you do not supply one, and the callback refuses a redirect whose state is not
+the one the request was started with (RFC 6749 §10.12). Supply your own `state` if you use it to carry
+application state across the round trip — it is checked the same way.
+
 #### Override oauth functions (Optional)
 
-Every network call (`refresh`, `revoke`, `authorize`, `userInfo`, ...) can be replaced per instance —
-no mutation of shared objects:
+Every network call (`refresh`, `revoke`, `authorize`, `userInfo`, ...) and the construction of the
+authorization URL (`authorizationUrl`) can be replaced per instance — no mutation of shared objects:
 
 ```typescript
 import { createOAuth, defaultOAuthFunctions } from 'vue-oidc'
@@ -195,6 +213,67 @@ const oauth = createOAuth({
     }
   }
 })
+```
+
+#### `vue-oidc/core` — the protocol without vue
+
+The flow is separable from the reactivity that drives it in a browser: `vue-oidc/core` is the protocol
+by itself, with **no vue in its graph** (only `jose`), so it runs in a request handler, a worker or a
+test. Two functions, and nothing implicit between them:
+
+```typescript
+import { beginAuthorization, completeAuthorization } from 'vue-oidc/core'
+
+// starts nothing and stores nothing — you decide where the handoff lives
+const { url, handoff } = await beginAuthorization(config, {
+  redirectUri: 'https://app.example/callback',
+  responseType: 'code'
+})
+
+// ...later, on the request that comes back, with that same handoff
+const token = await completeAuthorization(config, request.url, handoff)
+```
+
+The handoff (`state`, `nonce`, `code_verifier`, `redirect_uri`) is passed back in rather than looked up,
+which is what makes a confidential client safe to run concurrently: a browser keeps it in storage, a
+server keeps it in a cookie or its own store, and neither can reach another user's. The same entry also
+publishes the primitives — `randomState`, `randomNonce`, `randomPKCECodeVerifier`,
+`calculatePKCECodeChallenge`, `parseRedirectParameters`, `createIdTokenVerifier`, `applyDiscovery` and
+`createDiscovery` (the issuer-keyed cache described under *Discovery*) — plus
+`defaultOAuthFunctions` and every protocol type. All of it is re-exported from the root, so a browser
+app needs no second import.
+
+#### Discovery
+
+Endpoints are resolved from the issuer's well-known document the first time a flow needs one — a login, a
+logout, a callback or a token refresh — not at `createOAuth()`. Endpoints you configure statically win and
+suppress the lookup entirely.
+
+Each instance gets its own resolver, which collapses concurrent lookups into a single request. A server
+rendering many requests wants one resolver *across* instances, so each issuer is fetched once per process
+rather than once per render:
+
+```typescript
+import { createDiscovery, createOAuth } from 'vue-oidc'
+
+const discovery = createDiscovery() // once, at server start
+
+// per request
+const oauth = createOAuth({ config: {...}, discovery })
+```
+
+A failed lookup is not cached, so an issuer that was briefly unreachable is retried rather than remembered.
+
+Want the fetch to start at bootstrap rather than at the first flow? Warm the resolver — the instance then
+finds it already resolved. `createOAuth()` deliberately does not do this for you: it is synchronous, so it
+would have to leave an unawaited fetch behind, and under SSR it would fetch on every render including the
+ones that never touch auth.
+
+```typescript
+const discovery = createDiscovery()
+discovery(config) // no await — the first flow awaits it
+
+const oauth = createOAuth({ config, discovery })
 ```
 
 #### SSR
@@ -234,6 +313,24 @@ server-side exchange without it would still burn the single-use authorization co
 the client's own exchange would then fail with `invalid_grant`. Callback guards need no SSR check.
 
 The library itself never imports `node:async_hooks` — it stays runtime-agnostic.
+
+#### Migrating from v5
+
+Three behaviour changes, all of them narrow:
+
+* **`state` is generated and verified.** `login()` sends a state whether or not you supply one, and
+  `oauthCallback` rejects a redirect whose state is not the one it issued, with `{ error: 'Invalid state' }`
+  (RFC 6749 §10.12). A provider that does not echo `state` back on the success response will now fail where
+  it previously passed. A provider that drops `state` only from its *error* response is tolerated — the
+  error reaches you unchanged.
+* **`prompt` is sent on its own.** It previously required `accessType` to be set, and was sent blank when
+  `accessType` was set without it. Now it is sent when you pass it and omitted when you do not.
+* **`OAuthFunctions` gained `authorizationUrl`.** `functions` in the config is `Partial<OAuthFunctions>`, so
+  overrides are unaffected. Only code that builds a complete `OAuthFunctions` object needs the new member —
+  spread `defaultOAuthFunctions` into it.
+
+Everything else is additive: the `vue-oidc/core` entry, `extras` on the authorization request, and the
+optional `discovery` resolver. No export was removed.
 
 #### Migrating from v4
 

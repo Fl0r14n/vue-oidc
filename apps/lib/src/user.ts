@@ -1,9 +1,9 @@
 import { ref, watch } from 'vue'
 import type { ConfigContext } from './config'
+import type { OAuthFunctions, UserInfo } from './core/types'
 import type { FetchContext } from './fetch'
 import type { Jwt } from './jwt'
 import type { TokenContext } from './token'
-import type { OAuthFunctions, UserInfo } from './types'
 
 export const createUser = (
   { config }: Pick<ConfigContext, 'config'>,

@@ -3,18 +3,8 @@ import { createOAuth, registerOAuthCleanup } from './test-utils'
 
 registerOAuthCleanup()
 
+import { OAuthType } from './core/types'
 import type { OAuth } from './types'
-import { OAuthType } from './types'
-
-;(globalThis as any).crypto = {
-  getRandomValues: jest.fn((arr: Uint8Array) => {
-    for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256)
-    return arr
-  }),
-  subtle: {
-    digest: jest.fn(async () => new Uint8Array(32).buffer)
-  }
-}
 
 const mockLocation = {
   replace: jest.fn(),
@@ -92,9 +82,20 @@ describe('flows', () => {
       expect(mockLocation.replace).toHaveBeenCalledWith(expect.stringContaining('state=random-state'))
       // the url is also returned so an SSR host (no location) can answer with a 302
       expect(url).toBe((mockLocation.replace as any).mock.calls.at(-1)[0])
-      // redirect_uri, nonce and code_verifier land in one token write
+      // redirect_uri, state, nonce and code_verifier land in one token write
       expect(oauth.token.value.redirect_uri).toBe('https://app.com/callback')
+      expect(oauth.token.value.state).toBe('random-state')
       expect(oauth.token.value.nonce).toBeDefined()
+    })
+
+    it('generates a state when the caller supplies none, so the callback has something to check', async () => {
+      oauth.typeConfig.value = { authorizePath: 'https://auth.com/authorize', clientId: 'client123', scope: 'openid' }
+
+      await oauth.login({ redirectUri: 'https://app.com/callback', responseType: 'code' })
+
+      const url: string = (mockLocation.replace as any).mock.calls.at(-1)[0]
+      expect(oauth.token.value.state).toBeTruthy()
+      expect(new URL(url).searchParams.get('state')).toBe(oauth.token.value.state as string)
     })
 
     it('should handle PKCE if enabled', async () => {
@@ -194,6 +195,29 @@ describe('flows', () => {
         access_token: 'new-at'
       })
       expect(oauth.state.value).toBe('s456')
+    })
+
+    it('refuses a callback whose state is not the one the request was started with', async () => {
+      oauth.typeConfig.value = { authorizePath: 'https://auth.com/authorize', clientId: 'client123', scope: 'openid' }
+      await oauth.login({ redirectUri: 'https://app.com/callback', responseType: 'code' })
+      mockLocation.search = '?code=c123&state=forged'
+
+      await oauth.oauthCallback()
+
+      expect(oauth.token.value.error).toBe('Invalid state')
+      expect(functions.authorize).not.toHaveBeenCalled()
+    })
+
+    it('completes a callback carrying the state it issued', async () => {
+      oauth.typeConfig.value = { authorizePath: 'https://auth.com/authorize', clientId: 'client123', scope: 'openid' }
+      await oauth.login({ redirectUri: 'https://app.com/callback', responseType: 'code' })
+      const { state, nonce } = oauth.token.value
+      functions.authorize.mockResolvedValue({ access_token: 'new-at', id_token: `header.${btoa(JSON.stringify({ nonce }))}.sig` })
+      mockLocation.search = `?code=c123&state=${state}`
+
+      await oauth.oauthCallback()
+
+      expect(oauth.token.value).toMatchObject({ access_token: 'new-at' })
     })
 
     it('should validate nonce if openid scope was used', async () => {

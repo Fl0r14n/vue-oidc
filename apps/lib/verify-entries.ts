@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 const read = (name: string) => readFileSync(`dist/${name}`, 'utf8')
 
 const index = read('index.mjs')
+const core = read('core.mjs')
 const component = read('component.mjs')
 const axiosAdapter = read('axios.mjs')
 
@@ -38,6 +39,14 @@ for (const [name, source] of [
 ] as const) {
   check(!/\bconst createOAuth\b/.test(source), `${name} has inlined createOAuth instead of importing it — a second module pointer`)
 }
+
+// the /core entry exists to be usable where there is no vue — a vue import in it is the whole claim gone.
+// jose is a real runtime dependency and stays external; vue is a peer and must not appear at all.
+check(!imports(core).includes('vue'), 'core.mjs imports vue — the entry exists to be usable without it')
+check(!/\bfrom\s*["']vue-oidc/.test(core), 'core.mjs imports vue-oidc — core is the bottom of the graph, it depends on nothing above it')
+// the root bundles core rather than importing it by package name: core holds no state, so a second copy
+// is harmless, and the root importing its own package name is what the check below forbids
+check(/\bconst randomString\b/.test(index), 'index.mjs has not bundled core — the root must carry its own copy, not import vue-oidc/core')
 
 // the root must stay fetch-only: it is what makes the axios peer optional and the core usable in a worker
 check(!/\bfrom\s*["']vue-oidc/.test(index), 'index.mjs imports vue-oidc — the root is the package, it cannot depend on itself')

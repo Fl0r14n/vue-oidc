@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from 'bun:test'
-import { defaultOAuthFunctions } from './functions'
+import { defaultOAuthFunctions } from './core/functions'
 import { createOAuth, registerOAuthCleanup } from './test-utils'
 
 registerOAuthCleanup()

@@ -1,3 +1,4 @@
+import { authorizationUrl } from './authorization'
 import { type OAuthFetch, type OAuthFunctions, OAuthType } from './types'
 
 const FORM_HEADERS = {
@@ -28,6 +29,8 @@ const post = (url: string, fields: Record<string, string | undefined>, headers?:
   request(url, { method: 'POST', headers: { ...FORM_HEADERS, ...headers }, body: form(fields) })
 
 export const defaultOAuthFunctions: OAuthFunctions = {
+  authorizationUrl,
+
   refresh: async (token, config) => {
     const { tokenPath, clientId, clientSecret, scope } = config || {}
     const { refresh_token, type } = token || {}
@@ -127,3 +130,5 @@ export const defaultOAuthFunctions: OAuthFunctions = {
     )
   }
 }
+
+export const resolveOAuthFunctions = (functions?: Partial<OAuthFunctions>): OAuthFunctions => ({ ...defaultOAuthFunctions, ...functions })

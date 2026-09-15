@@ -126,7 +126,7 @@ import {
   VSpacer,
   VTextField
 } from 'vuetify/components'
-import type { AuthorizationCodeParameters, OAuthParameters, ResourceOwnerParameters } from '../types'
+import type { AuthorizationCodeParameters, OAuthParameters, ResourceOwnerParameters } from '../core/types'
 
 export type OAuthProps = Partial<ResourceOwnerParameters & AuthorizationCodeParameters & { logoutRedirectUri: string }>
 
