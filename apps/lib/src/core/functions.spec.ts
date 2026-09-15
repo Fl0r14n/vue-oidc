@@ -162,12 +162,13 @@ describe('defaultOAuthFunctions', () => {
   })
 
   describe('openIdConfiguration', () => {
-    it('gets the discovery document with the client_id as a query param', async () => {
+    // a `client_id` here is not in OIDC Discovery 1.0 §4.1, and Entra rejects the request outright
+    it('gets the discovery document with no query parameters at all', async () => {
       fetchMock.mockResolvedValue(respond(200, { issuer: 'https://idp.io' }))
 
       const config = await defaultOAuthFunctions.openIdConfiguration({ issuerPath: 'https://idp.io', clientId: 'c' })
 
-      expect(sent().url).toBe('https://idp.io/.well-known/openid-configuration?client_id=c')
+      expect(sent().url).toBe('https://idp.io/.well-known/openid-configuration')
       expect(sent().method).toBeUndefined()
       expect(config).toEqual({ issuer: 'https://idp.io' })
     })

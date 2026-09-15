@@ -103,14 +103,12 @@ export const defaultOAuthFunctions: OAuthFunctions = {
     return (token && { ...token, type: OAuthType.RESOURCE }) || undefined
   },
 
+  // OIDC Discovery 1.0 §4.1 defines no query parameters here, and Entra answers a `client_id` with
+  // AADSTS1004008 rather than a document
   openIdConfiguration: async config => {
-    const { issuerPath, clientId } = config || {}
+    const { issuerPath } = config || {}
     if (!issuerPath) return undefined
-    const url = new URL(`${issuerPath}/.well-known/openid-configuration`)
-    if (clientId) {
-      url.searchParams.set('client_id', clientId)
-    }
-    return (await request(url.toString(), { headers: { Accept: 'application/json' } })) || undefined
+    return (await request(`${issuerPath}/.well-known/openid-configuration`, { headers: { Accept: 'application/json' } })) || undefined
   },
 
   userInfo: async (config, oauthFetch = fetch) => {
