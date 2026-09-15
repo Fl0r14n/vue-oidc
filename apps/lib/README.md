@@ -243,6 +243,38 @@ publishes the primitives — `randomState`, `randomNonce`, `randomPKCECodeVerifi
 `defaultOAuthFunctions` and every protocol type. All of it is re-exported from the root, so a browser
 app needs no second import.
 
+#### Verifying the id token
+
+`strictJwt` is on by default: the id token's signature is checked against the provider's JWKS, along with
+`iss`, `aud`, `exp` and the `nonce` the request was started with. `azp` is checked too — required once the
+token carries more than one audience, and required to be you whenever it is present (OIDC Core 3.1.3.7).
+
+**Multi-tenant providers.** Entra's `/common` discovery document does not advertise an issuer; it
+advertises a template, because the tenant is not known until the token arrives:
+
+```
+https://login.microsoftonline.com/{tenantid}/v2.0
+```
+
+Discovery records it as `issuer` (distinct from `issuerPath`, which is where the document lives), and the
+verifier resolves it per token from the `tid` claim before comparing. Nothing to configure. For any other
+shape of derived issuer, `createIdTokenVerifier` takes a function:
+
+```typescript
+createIdTokenVerifier({ jwksUri, audience, issuer: claims => `https://${claims.org}.provider.example` })
+```
+
+**Reading the claims.** `completeAuthorization` verifies the id token but returns the token, not the
+claims. Hold your own verifier and call it again — the JWKS is cached on the verifier, so a second call is
+a signature check and no network:
+
+```typescript
+const verifyIdToken = createIdTokenVerifier({ jwksUri, issuer, audience })
+
+const token = await completeAuthorization(config, request.url, handoff, { verifyIdToken })
+const claims = await verifyIdToken(token?.id_token)
+```
+
 #### Discovery
 
 Endpoints are resolved from the issuer's well-known document the first time a flow needs one — a login, a
@@ -329,8 +361,9 @@ Three behaviour changes, all of them narrow:
   overrides are unaffected. Only code that builds a complete `OAuthFunctions` object needs the new member —
   spread `defaultOAuthFunctions` into it.
 
-Everything else is additive: the `vue-oidc/core` entry, `extras` on the authorization request, and the
-optional `discovery` resolver. No export was removed.
+Everything else is additive: the `vue-oidc/core` entry, `extras` on the authorization request, the
+optional `discovery` resolver, and (6.1) the `azp` check and multi-tenant issuer resolution. No export was
+removed.
 
 #### Migrating from v4
 

@@ -1,5 +1,6 @@
-import { describe, expect, it, jest } from 'bun:test'
-import { beginAuthorization, completeAuthorization } from './flow'
+import { afterEach, describe, expect, it, jest } from 'bun:test'
+import { exportJWK, generateKeyPair, SignJWT } from 'jose'
+import { beginAuthorization, completeAuthorization as complete, completeAuthorization } from './flow'
 import type { IdTokenVerifier } from './jwt'
 import { OAuthType } from './types'
 
@@ -164,5 +165,77 @@ describe('completeAuthorization', () => {
 
     expect(one).toMatchObject({ access_token: 'at-v1' })
     expect(two).toMatchObject({ access_token: 'at-v2' })
+  })
+})
+
+// the leg k2's oauth app runs: a confidential client federating to Entra's /common endpoint, whose
+// discovery document asserts a {tenantid} template rather than an issuer
+describe('completeAuthorization against a multi-tenant provider', () => {
+  const TENANT = '9188040d-6c67-4c5b-b112-36a304b66dad'
+  const realFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = realFetch
+  })
+
+  const entra = async (tid: string) => {
+    const pair = await generateKeyPair('ES256', { extractable: true })
+    const jwks = { keys: [{ ...(await exportJWK(pair.publicKey)), alg: 'ES256', kid: 'k1' }] }
+    globalThis.fetch = jest.fn(async () => new Response(JSON.stringify(jwks))) as any
+    const id_token = await new SignJWT({ iss: `https://login.microsoftonline.com/${tid}/v2.0`, tid, sub: 'u1', nonce: 'n1' })
+      .setProtectedHeader({ alg: 'ES256', kid: 'k1' })
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .setAudience('client123')
+      .sign(pair.privateKey)
+    return id_token
+  }
+
+  const config = {
+    clientId: 'client123',
+    clientSecret: 'shh',
+    tokenPath: 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    issuerPath: 'https://login.microsoftonline.com/common/v2.0',
+    issuer: 'https://login.microsoftonline.com/{tenantid}/v2.0',
+    jwksUri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys'
+  }
+
+  it('verifies the id token against the tenant it names', async () => {
+    const id_token = await entra(TENANT)
+    const authorize = async () => ({ access_token: 'at', id_token })
+
+    const token = await complete(
+      config,
+      'https://k2/oauth/microsoft/callback?code=c1&state=s1',
+      { state: 's1', nonce: 'n1' },
+      {
+        functions: { authorize }
+      }
+    )
+
+    expect(token).toMatchObject({ access_token: 'at' })
+  })
+
+  it('still rejects a token from a tenant the issuer template cannot produce', async () => {
+    const pair = await generateKeyPair('ES256', { extractable: true })
+    const jwks = { keys: [{ ...(await exportJWK(pair.publicKey)), alg: 'ES256', kid: 'k1' }] }
+    globalThis.fetch = jest.fn(async () => new Response(JSON.stringify(jwks))) as any
+    const id_token = await new SignJWT({ iss: 'https://login.microsoftonline.com/attacker/v2.0', tid: TENANT, sub: 'u1', nonce: 'n1' })
+      .setProtectedHeader({ alg: 'ES256', kid: 'k1' })
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .setAudience('client123')
+      .sign(pair.privateKey)
+
+    const token = await completeAuthorization(
+      config,
+      'https://k2/oauth/microsoft/callback?code=c1&state=s1',
+      { state: 's1', nonce: 'n1' },
+      {
+        functions: { authorize: async () => ({ access_token: 'at', id_token }) }
+      }
+    )
+
+    expect(token).toEqual({ error: 'Invalid token' })
   })
 })

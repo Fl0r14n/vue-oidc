@@ -14,6 +14,7 @@ export const applyDiscovery = (config: Partial<OpenIdConfig> | undefined, discov
   if (!discovered) return c
   return {
     ...c,
+    ...(discovered.issuer && { issuer: discovered.issuer }),
     ...(discovered.authorization_endpoint && { authorizePath: discovered.authorization_endpoint }),
     ...(discovered.token_endpoint && { tokenPath: discovered.token_endpoint }),
     ...(discovered.revocation_endpoint && { revokePath: discovered.revocation_endpoint }),

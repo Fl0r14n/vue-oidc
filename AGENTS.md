@@ -87,6 +87,12 @@ externalizes it in the bundle, and `verify-entries.ts` asserts the import surviv
   writable, so the config is not necessarily final when the instance is built, and under SSR an eager
   lookup would put a well-known fetch on every render including the ones that never touch auth. Caching
   belongs in the `Discovery` resolver, not in an earlier call site.
+- **`issuerPath` is where the well-known document lives; `issuer` is what the provider asserts in `iss`.**
+  They differ only for multi-tenant providers — Entra's `/common` document advertises a `{tenantid}`
+  template, resolved per token from the `tid` claim, because no literal issuer exists until a token
+  arrives. Discovery fills `issuer` in and never rewrites `issuerPath`, or the next lookup has nowhere to
+  go. `core/jwt.spec.ts` signs real tokens against a stubbed JWKS; a verification rule added with a
+  stubbed verifier would assert nothing.
 - **`src/core/` is pure and `src/*.ts` is the reactive layer over it.** A function that computes something
   from its arguments belongs in core; a function that reads or writes a ref belongs above it. `flows.ts`
   is the adapter between them — it holds the handoff in the token ref, redirects, and delegates the

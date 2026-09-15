@@ -11,7 +11,7 @@ export const createJwt = ({ config, strictJwt }: Pick<ConfigContext, 'config' | 
   watch(
     [
       () => (config.value as OpenIdConfig)?.jwksUri,
-      () => (config.value as OpenIdConfig)?.issuerPath,
+      () => (config.value as OpenIdConfig)?.issuer || (config.value as OpenIdConfig)?.issuerPath,
       () => config.value?.clientId,
       strictJwt
     ],

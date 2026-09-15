@@ -36,6 +36,16 @@ describe('applyDiscovery', () => {
     })
   })
 
+  it('records the issuer the provider asserts, which is not always where the document lives', () => {
+    const entra = { ...wellKnown, issuer: 'https://login.microsoftonline.com/{tenantid}/v2.0' }
+
+    const applied = applyDiscovery({ issuerPath: 'https://login.microsoftonline.com/common/v2.0' } as any, entra)
+
+    expect(applied.issuer).toBe('https://login.microsoftonline.com/{tenantid}/v2.0')
+    // the discovery endpoint is not rewritten — a later lookup still has somewhere to go
+    expect(applied.issuerPath).toBe('https://login.microsoftonline.com/common/v2.0')
+  })
+
   it('leaves a value the document does not carry alone', () => {
     const applied = applyDiscovery({ userPath: 'https://mine/me' } as any, { token_endpoint: 'https://auth.com/t' })
 

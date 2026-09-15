@@ -35,7 +35,12 @@ export type AuthorizationCodePKCEConfig = AuthorizationCodeConfig & {
 }
 
 export type OpenIdConfig = AuthorizationCodePKCEConfig & {
+  /** where the well-known document lives */
   issuerPath: string
+  /** the issuer identifier as the provider asserts it in `iss`, filled in by discovery. Usually the same
+   * as `issuerPath`; Entra's multi-tenant document advertises a `{tenantid}` template instead, which the
+   * id-token verifier resolves per token. Falls back to `issuerPath` when absent. */
+  issuer?: string
   jwksUri?: string
 }
 
